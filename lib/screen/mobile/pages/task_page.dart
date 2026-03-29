@@ -12,12 +12,12 @@ class TaskPage extends StatefulWidget {
 class _TaskPageState extends State<TaskPage> {
   List<Task> taskList = [];
 
-  void fetchData() async {
-    FileDownloader().allTasks().then((onValue) => {
-          setState(() {
-            taskList = onValue;
-          })
-        });
+  Future<void> fetchData() async {
+    final tasks = await FileDownloader().allTasks();
+    if (!mounted) return;
+    setState(() {
+      taskList = tasks;
+    });
   }
 
   @override
