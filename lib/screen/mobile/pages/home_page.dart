@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -29,6 +31,8 @@ class _HomePageState extends State<HomePage> {
       );
 
   final ShakeAnimationController _shakeAnimationController = ShakeAnimationController();
+  Timer? _shakeTimer;
+  Timer? _initialShakeTimer;
 
   @override
   void initState() {
@@ -38,12 +42,25 @@ class _HomePageState extends State<HomePage> {
   }
 
   void startShake() async {
-    Future.delayed(const Duration(seconds: 1), () async {
+    _shakeTimer?.cancel();
+    _initialShakeTimer?.cancel();
+
+    _initialShakeTimer = Timer(const Duration(seconds: 1), () {
+      if (!mounted) return;
       _shakeAnimationController.start(shakeCount: 1);
-      await Future.delayed(const Duration(milliseconds: 2500));
-      startShake();
+      _shakeTimer = Timer.periodic(const Duration(milliseconds: 3500), (timer) {
+        if (!mounted) return;
+        _shakeAnimationController.start(shakeCount: 1);
+      });
     });
-    // Future.delayed(const Duration(seconds: 3), () => {startShake()});
+  }
+
+  @override
+  void dispose() {
+    _initialShakeTimer?.cancel();
+    _shakeTimer?.cancel();
+    textController.dispose();
+    super.dispose();
   }
 
   @override
@@ -161,7 +178,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> startParse() async {
-    var parseUrl = textController.text;
+    var parseUrl = textController.text.trim();
     Match? match = RegExp(r'http[s]?:\/\/[\w.]+[\w/]*[\w.]*\??[\w=&:\-+%]*[/]*').firstMatch(parseUrl);
     var url = match?.group(0) ?? '';
     if (!url.contains('http')) {

@@ -49,11 +49,18 @@ class _VideoDetailPagePageState extends State<VideoDetailPage> with SingleTicker
         Urls.shortVideoParse,
         params: {'url': url},
         (jsonData) => VideoModel.fromJson(jsonData),
-        exception: (e) => {
-              debugPrint('parse exception $e'),
-              if (e.code == 401) {ToastUtil.error(e.message)} else {ToastUtil.error(S.current.toastVideoExecuteError)},
-              Navigator.pop(context)
-            });
+        exception: (e) {
+          debugPrint('parse exception $e');
+          if (!mounted) return;
+          if (e.code == 401) {
+            ToastUtil.error(e.message);
+          } else {
+            ToastUtil.error(S.current.toastVideoExecuteError);
+          }
+          Navigator.pop(context);
+        });
+
+    if (!mounted) return;
 
     setState(() {
       //过滤全部全部视频
@@ -93,6 +100,7 @@ class _VideoDetailPagePageState extends State<VideoDetailPage> with SingleTicker
     if (url?.isNotEmpty == true) {
       _player.stream.videoParams.listen(
         (value) {
+          if (!mounted) return;
           setState(() {
             if ((value.aspect ?? 0.0) > 0 && (value.aspect ?? 0.0) < 1) {
               videoMarginTop = 0;
