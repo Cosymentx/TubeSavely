@@ -257,7 +257,7 @@ class _DesktopCompressViewState extends State<DesktopCompressView>
           value: currentPreset,
           items: [
             DropdownMenuItem(
-              value: CompressPreset.quick,
+              value: CompressPreset.balanced,
               child: Text(
                 'preset_quick'.tr,
                 style: TextStyle(
@@ -268,7 +268,7 @@ class _DesktopCompressViewState extends State<DesktopCompressView>
               ),
             ),
             DropdownMenuItem(
-              value: CompressPreset.normal,
+              value: CompressPreset.quality,
               child: Text(
                 'preset_normal'.tr,
                 style: TextStyle(
@@ -279,7 +279,7 @@ class _DesktopCompressViewState extends State<DesktopCompressView>
               ),
             ),
             DropdownMenuItem(
-              value: CompressPreset.extreme,
+              value: CompressPreset.small,
               child: Text(
                 'preset_extreme'.tr,
                 style: TextStyle(
@@ -290,7 +290,7 @@ class _DesktopCompressViewState extends State<DesktopCompressView>
               ),
             ),
             DropdownMenuItem(
-              value: CompressPreset.customSize,
+              value: CompressPreset.targetSize,
               child: Text(
                 'preset_custom'.tr,
                 style: TextStyle(
@@ -303,7 +303,7 @@ class _DesktopCompressViewState extends State<DesktopCompressView>
           ],
           onChanged: (val) {
             if (val != null) {
-              if (val == CompressPreset.customSize) {
+              if (val == CompressPreset.targetSize) {
                 _showCustomSizeDialog();
               } else {
                 _compressController.setPreset(val);
@@ -334,8 +334,9 @@ class _DesktopCompressViewState extends State<DesktopCompressView>
   }
 
   void _showCustomSizeDialog() {
+    final currentTarget = _compressController.config.value.targetSizeMB;
     final controller = TextEditingController(
-      text: _compressController.config.value.targetSizeMB.toStringAsFixed(0),
+      text: currentTarget != null ? currentTarget.toStringAsFixed(0) : '25',
     );
 
     showDialog(
@@ -360,7 +361,7 @@ class _DesktopCompressViewState extends State<DesktopCompressView>
             onPressed: () {
               final size = double.tryParse(controller.text.trim());
               if (size != null && size > 0) {
-                _compressController.setPreset(CompressPreset.customSize);
+                _compressController.setPreset(CompressPreset.targetSize);
                 _compressController.setTargetSizeMB(size);
               }
               Navigator.of(ctx).pop();
@@ -383,7 +384,9 @@ class _DesktopCompressViewState extends State<DesktopCompressView>
     Color statusColor;
 
     if (isCompleted) {
-      final savedPercent = task.savingsRatio > 0 ? (task.savingsRatio * 100).toStringAsFixed(1) : '0';
+      final savedPercent = (task.savedRatio != null && task.savedRatio! > 0)
+          ? task.savedRatio!.toStringAsFixed(1)
+          : '0';
       statusText = '${_formatFileSize(task.sourceSizeBytes)} → ${_formatFileSize(task.targetSizeBytes ?? 0)} (${'saved_size'.tr} $savedPercent%)';
       statusColor = Colors.green.shade600;
     } else if (isFailed) {
