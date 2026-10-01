@@ -24,8 +24,9 @@ class UserService extends GetxService {
     Logger.d('UserService initialized');
 
     // 检查是否已登录
-    final token = _storageProvider.getUserToken();
+    final token = await _storageProvider.getUserToken();
     isLoggedIn.value = token != null && token.isNotEmpty;
+    _apiProvider.setAuthToken(token);
 
     // 如果已登录，异步获取用户信息，不阻塞启动
     if (isLoggedIn.value) {
@@ -45,7 +46,7 @@ class UserService extends GetxService {
       Logger.d('User login: $email');
 
       final response = await _apiProvider.login(email, password);
-      Logger.d("User login response: ${response.bodyString}");
+      Logger.d('User login response received');
 
       // 处理API响应
       final apiResponse =
@@ -55,8 +56,9 @@ class UserService extends GetxService {
         // 保存令牌
         final token = apiResponse.data!['access_token'];
         if (token != null) {
-          Logger.d('Saving token: $token');
+          Logger.d('Saving authentication token');
           await _storageProvider.saveUserToken(token);
+          _apiProvider.setAuthToken(token);
           isLoggedIn.value = true;
 
           // 如果响应中包含用户信息，直接使用
@@ -107,7 +109,7 @@ class UserService extends GetxService {
       Logger.d('User register: $email');
 
       final response = await _apiProvider.register(email, password, name);
-      Logger.d("User register response: ${response.bodyString}");
+      Logger.d('User register response received');
 
       // 处理API响应
       final apiResponse =
@@ -117,8 +119,9 @@ class UserService extends GetxService {
         // 保存令牌
         final token = apiResponse.data!['access_token'];
         if (token != null) {
-          Logger.d('Saving token: $token');
+          Logger.d('Saving authentication token');
           await _storageProvider.saveUserToken(token);
+          _apiProvider.setAuthToken(token);
           isLoggedIn.value = true;
 
           // 如果响应中包含用户信息，直接使用
@@ -207,6 +210,7 @@ class UserService extends GetxService {
 
       // 清除本地存储的用户数据
       await _storageProvider.clearUserData();
+      _apiProvider.setAuthToken(null);
 
       // 更新状态
       isLoggedIn.value = false;
@@ -371,7 +375,7 @@ class UserService extends GetxService {
 
       // 调用 API
       final response = await _apiProvider.loginWithApple(data);
-      Logger.d("Apple login response: ${response.bodyString}");
+      Logger.d('Apple login response received');
 
       // 处理API响应
       final apiResponse =
@@ -381,8 +385,9 @@ class UserService extends GetxService {
         // 保存令牌
         final token = apiResponse.data!['access_token'];
         if (token != null) {
-          Logger.d('Saving token: $token');
+          Logger.d('Saving authentication token');
           await _storageProvider.saveUserToken(token);
+          _apiProvider.setAuthToken(token);
           isLoggedIn.value = true;
 
           // 如果响应中包含用户信息，直接使用
@@ -443,7 +448,7 @@ class UserService extends GetxService {
 
       // 调用 API
       final response = await _apiProvider.loginWithGoogle(data);
-      Logger.d("Google login response: ${response.bodyString}");
+      Logger.d('Google login response received');
 
       // 处理API响应
       final apiResponse =
@@ -453,8 +458,9 @@ class UserService extends GetxService {
         // 保存令牌
         final token = apiResponse.data!['access_token'];
         if (token != null) {
-          Logger.d('Saving token: $token');
+          Logger.d('Saving authentication token');
           await _storageProvider.saveUserToken(token);
+          _apiProvider.setAuthToken(token);
           isLoggedIn.value = true;
 
           // 如果响应中包含用户信息，直接使用
