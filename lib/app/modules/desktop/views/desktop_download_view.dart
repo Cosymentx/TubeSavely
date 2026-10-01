@@ -157,6 +157,16 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
       request.headers['User-Agent'] =
           'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
       final response = await client.send(request);
+
+      if (response.statusCode >= 400) {
+        throw Exception('HTTP ${response.statusCode}');
+      }
+
+      final contentType = response.headers['content-type'] ?? '';
+      if (contentType.contains('text/html')) {
+        throw Exception('URL returned HTML webpage, not a direct media file');
+      }
+
       final total = response.contentLength ?? 0;
       int received = 0;
       final file = File(targetPath);
@@ -189,6 +199,13 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
           item.localPath = targetPath;
         });
       }
+    } catch (e) {
+      // 如果下载失败或下载了无效文件，删除半成品/无效文件
+      try {
+        final f = File(targetPath);
+        if (await f.exists()) await f.delete();
+      } catch (_) {}
+      rethrow;
     } finally {
       client.close();
     }
@@ -220,65 +237,86 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
         item.video.url.toLowerCase().endsWith('.webm');
 
     if (ytDlpPath != null && !isDirectMedia) {
-      try {
-        final args = [
+      // 检查 Chrome Cookie 是否存在，如果存在则传递 --cookies-from-browser chrome 免登录解析与下载
+      final chromeCookieFile = File(
+          '${Platform.environment['HOME']}/Library/Application Support/Google/Chrome/Default/Cookies');
+      final hasChromeCookies = await chromeCookieFile.exists();
+
+      final attemptArgsList = <List<String>>[];
+      if (hasChromeCookies) {
+        attemptArgsList.add([
           '--newline',
           '--no-part',
+          '--cookies-from-browser', 'chrome',
           '-f', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
           '--merge-output-format', 'mp4',
           '-o', targetPath,
           item.video.url,
-        ];
+        ]);
+      }
+      attemptArgsList.add([
+        '--newline',
+        '--no-part',
+        '-f', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+        '--merge-output-format', 'mp4',
+        '-o', targetPath,
+        item.video.url,
+      ]);
 
-        Logger.d('Starting yt-dlp download: $ytDlpPath ${args.join(' ')}');
-        final process = await Process.start(ytDlpPath, args);
-        DateTime lastSetState = DateTime.now();
+      for (final args in attemptArgsList) {
+        try {
+          Logger.d('Starting yt-dlp download: $ytDlpPath ${args.join(' ')}');
+          final process = await Process.start(ytDlpPath, args);
+          DateTime lastSetState = DateTime.now();
 
-        process.stdout.transform(utf8.decoder).listen((line) {
-          final pctMatch = RegExp(r'\[download\]\s+([\d\.]+)%').firstMatch(line);
-          final speedMatch = RegExp(r'at\s+([^\s]+(?:KiB|MiB|GiB|B)/s)').firstMatch(line);
-          final etaMatch = RegExp(r'ETA\s+([\d:]+)').firstMatch(line);
+          process.stdout.transform(utf8.decoder).listen((line) {
+            final pctMatch = RegExp(r'\[download\]\s+([\d\.]+)%').firstMatch(line);
+            final speedMatch = RegExp(r'at\s+([^\s]+(?:KiB|MiB|GiB|B)/s)').firstMatch(line);
+            final etaMatch = RegExp(r'ETA\s+([\d:]+)').firstMatch(line);
 
-          if (pctMatch != null) {
-            final pct = double.tryParse(pctMatch.group(1) ?? '0') ?? 0.0;
-            final now = DateTime.now();
-            if (now.difference(lastSetState).inMilliseconds >= 250 || pct >= 100.0) {
-              lastSetState = now;
-              if (mounted) {
-                setState(() {
-                  item.progress = (pct / 100.0).clamp(0.0, 1.0);
-                  String info = '${pct.toStringAsFixed(1)}%';
-                  if (speedMatch != null) info += ' | ${speedMatch.group(1)}';
-                  if (etaMatch != null) info += ' | ETA: ${etaMatch.group(1)}';
-                  item.statusText = info;
-                });
+            if (pctMatch != null) {
+              final pct = double.tryParse(pctMatch.group(1) ?? '0') ?? 0.0;
+              final now = DateTime.now();
+              if (now.difference(lastSetState).inMilliseconds >= 250 || pct >= 100.0) {
+                lastSetState = now;
+                if (mounted) {
+                  setState(() {
+                    item.progress = (pct / 100.0).clamp(0.0, 1.0);
+                    String info = '${pct.toStringAsFixed(1)}%';
+                    if (speedMatch != null) info += ' | ${speedMatch.group(1)}';
+                    if (etaMatch != null) info += ' | ETA: ${etaMatch.group(1)}';
+                    item.statusText = info;
+                  });
+                }
               }
             }
-          }
-        });
+          });
 
-        final exitCode = await process.exitCode;
-        if (exitCode == 0 && await File(targetPath).exists()) {
-          if (mounted) {
-            setState(() {
-              item.isDownloading = false;
-              item.progress = 1.0;
-              item.statusText = 'status_complete'.tr;
-            });
+          final exitCode = await process.exitCode;
+          if (exitCode == 0 && await File(targetPath).exists()) {
+            if (mounted) {
+              setState(() {
+                item.isDownloading = false;
+                item.progress = 1.0;
+                item.statusText = 'status_complete'.tr;
+              });
+            }
+            return;
+          } else {
+            Logger.w('yt-dlp exited with $exitCode');
           }
-          return;
-        } else {
-          Logger.w('yt-dlp exited with $exitCode, trying fallback');
+        } catch (e) {
+          Logger.e('Error with yt-dlp attempt: $e');
         }
-      } catch (e) {
-        Logger.e('Error with yt-dlp download: $e');
       }
     }
 
-    // 回退到流式 HTTP 直链下载
+    // 回退到流式 HTTP 直链下载（仅针对包含真实视频直链的地址）
     try {
       String downloadUrl = item.video.url;
-      if (item.video.qualities.isNotEmpty && item.video.qualities.first.url.startsWith('http')) {
+      if (item.video.qualities.isNotEmpty &&
+          item.video.qualities.first.url.startsWith('http') &&
+          !item.video.qualities.first.url.contains('youtube.com/watch')) {
         downloadUrl = item.video.qualities.first.url;
       }
       await _downloadViaHttp(downloadUrl, targetPath, item);
