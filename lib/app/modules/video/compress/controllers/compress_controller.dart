@@ -234,6 +234,25 @@ class CompressController extends GetxController {
     }
   }
 
+  /// 重新开始单个任务
+  Future<void> retryTask(String taskId) async {
+    final idx = tasks.indexWhere((t) => t.id == taskId);
+    if (idx != -1) {
+      tasks[idx] = tasks[idx].copyWith(
+        status: CompressTaskStatus.pending,
+        progress: 0.0,
+        errorMessage: null,
+      );
+      await startBatchCompress();
+    }
+  }
+
+  /// 添加并立即开始压缩
+  Future<void> addAndStart(List<String> filePaths) async {
+    await addVideoFiles(filePaths);
+    await startBatchCompress();
+  }
+
   /// 移除单个任务
   void removeTask(String taskId) {
     cancelTask(taskId);

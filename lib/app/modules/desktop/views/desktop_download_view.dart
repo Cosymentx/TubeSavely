@@ -347,7 +347,7 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    item.video.title ?? 'video.mp4',
+                    item.video.title.isNotEmpty ? item.video.title : 'video.mp4',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
