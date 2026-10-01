@@ -24,8 +24,14 @@ class VideoRepository {
       // 如果解析服务失败，尝试使用API解析
       Logger.d('Falling back to API for video parsing');
       final response = await _apiProvider.parseVideo(url);
-      if (response.status.isOk) {
-        return VideoModel.fromJson(response.body);
+      if (response.status.isOk && response.body != null) {
+        final body = response.body;
+        if (body is Map<String, dynamic>) {
+          if (body['code'] == 200 && body['data'] is Map<String, dynamic>) {
+            return VideoModel.fromJson(body['data'] as Map<String, dynamic>);
+          }
+          return VideoModel.fromJson(body);
+        }
       }
 
       Logger.w('Failed to parse video: $url');

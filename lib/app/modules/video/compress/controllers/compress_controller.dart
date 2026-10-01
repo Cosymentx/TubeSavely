@@ -35,6 +35,12 @@ class CompressController extends GetxController {
 
   @override
   void onClose() {
+    // 退出页面时，取消所有正在进行中的任务以防止孤儿进程
+    for (final task in tasks) {
+      if (task.status == CompressTaskStatus.compressing) {
+        _compressService.cancelTask(task.id);
+      }
+    }
     targetSizeController.dispose();
     super.onClose();
   }
