@@ -4,7 +4,7 @@ class Constants {
   // API
   static const String API_BASE_URL = 'https://tubesavely-server.vercel.app';
   static const String PARSE_API_BASE_URL = 'https://tubesavely-server.vercel.app';
-  static const String WEB_URL = 'https://tubesavely-vue.vercel.app/';
+  static const String WEB_URL = 'https://tubesavely.vercel.app/';
   static const int API_TIMEOUT = 15000; // 15秒
   static const int API_RETRY_COUNT = 2;
 
