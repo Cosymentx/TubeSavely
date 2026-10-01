@@ -47,7 +47,7 @@ class Constants {
     {
       'name': 'Bilibili',
       'icon': 'assets/images/bilibili.png',
-      'regex': r'bilibili\.com'
+      'regex': r'(bilibili\.com|b23\.tv)'
     },
     {
       'name': 'TikTok',
