@@ -16,7 +16,7 @@ keystoreProperties.load(keystorePropertiesFile.inputStream())
 android {
     namespace = "com.xhx.tubesavely"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = "27.0.12077973"
+    ndkVersion = "28.2.13676358"
 
     defaultConfig {
         applicationId = "com.xhx.tubesavely"
@@ -74,9 +74,6 @@ android {
         jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
-    kotlin {
-        jvmToolchain(17)
-    }
 }
 
 dependencies {

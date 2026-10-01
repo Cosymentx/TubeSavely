@@ -127,7 +127,8 @@ flutter:
   generate: true
 
   assets:
-    - assets/
+    - assets/ic_logo.png
+    - assets/ic_logo.ico
     - assets/images/
     - assets/icons/
     - assets/fonts/
