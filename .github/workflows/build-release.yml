@@ -107,7 +107,7 @@ jobs:
         run: flutter build apk --release
 
       - name: Upload Android Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: android-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
@@ -149,7 +149,7 @@ jobs:
           cd ../../..
 
       - name: Upload iOS Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ios-release-ipa
           path: build/ios/ipa/TubeSavely-iOS-unsigned.ipa
@@ -216,7 +216,7 @@ jobs:
           rm -rf dmg_staging
 
       - name: Upload macOS Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: macos-release-dmg
           path: TubeSavely-macOS.dmg
@@ -255,7 +255,7 @@ jobs:
           Compress-Archive -Path "build\windows\x64\runner\Release\*" -DestinationPath "TubeSavely-windows-x64.zip"
 
       - name: Upload Windows Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-release-zip
           path: TubeSavely-windows-x64.zip
@@ -299,7 +299,7 @@ jobs:
           tar -czvf TubeSavely-linux-x64.tar.gz -C build/linux/x64/release/bundle .
 
       - name: Upload Linux Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: linux-release-tar
           path: TubeSavely-linux-x64.tar.gz
