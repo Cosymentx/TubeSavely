@@ -14,7 +14,7 @@ class VideoRepository {
   // 解析视频链接
   Future<VideoModel?> parseVideo(String url) async {
     try {
-      final token = _storageProvider.getUserToken();
+      final token = await _storageProvider.getUserToken();
       final hasToken = token != null && token.isNotEmpty;
 
       // 如果用户已登录，优先调用后台解析接口获取完整画质与直链
