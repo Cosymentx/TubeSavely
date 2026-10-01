@@ -83,7 +83,7 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
 
       // 优先调用 VideoRepository 进行解析（本地解析器优先，后端 API 回退）
       final video = await _videoRepository.parseVideo(url).timeout(
-            const Duration(seconds: 12),
+            const Duration(seconds: 150),
             onTimeout: () => null,
           );
 
@@ -172,7 +172,13 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
       final response = await client.send(request);
 
       if (response.statusCode >= 400) {
-        throw Exception('HTTP ${response.statusCode}');
+        var message = 'HTTP ${response.statusCode}';
+        try {
+          final body = jsonDecode(await response.stream.bytesToString());
+          if (body is Map)
+            message = (body['msg'] ?? body['detail'] ?? message).toString();
+        } catch (_) {}
+        throw StateError(message);
       }
 
       final contentType = response.headers['content-type'] ?? '';
@@ -245,9 +251,8 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
     });
 
     final token = await _storage.getUserToken();
-    final mediaRequest = MediaDownloadRequest.forVideo(
-        item.video, token,
-        format: 'mp4');
+    final mediaRequest =
+        MediaDownloadRequest.forVideo(item.video, token, format: 'mp4');
     if (mediaRequest.method == 'POST') {
       try {
         await _downloadViaHttp(mediaRequest.url, targetPath, item,
@@ -258,7 +263,8 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
             item.isDownloading = false;
             item.statusText = 'status_failed'.tr;
           });
-        Utils.showSnackbar('error'.tr, '视频下载失败，请重新解析后重试。');
+        Utils.showSnackbar('error'.tr,
+            error is StateError ? error.message.toString() : '视频下载失败，请稍后重试。');
       }
       return;
     }
