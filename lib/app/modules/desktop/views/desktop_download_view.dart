@@ -1,8 +1,10 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
 import '../../../data/models/download_task_model.dart';
 import '../../../data/models/video_model.dart';
 import '../../../data/providers/api_provider.dart';
@@ -118,63 +120,176 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
     }
   }
 
+  String _sanitizeFileName(String name) {
+    String clean = name
+        .replaceAll(RegExp(r'[\\/:*?"<>|\r\n\t]+'), '_')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    if (clean.length > 80) {
+      clean = clean.substring(0, 80).trim();
+    }
+    return clean.isEmpty ? 'Video_${DateTime.now().millisecondsSinceEpoch}' : clean;
+  }
+
+  Future<String?> _getYtDlpPath() async {
+    const candidatePaths = [
+      '/usr/local/bin/yt-dlp',
+      '/opt/homebrew/bin/yt-dlp',
+      '/usr/bin/yt-dlp',
+    ];
+    for (final p in candidatePaths) {
+      if (await File(p).exists()) return p;
+    }
+    try {
+      final res = await Process.run('which', ['yt-dlp']);
+      if (res.exitCode == 0 && res.stdout.toString().trim().isNotEmpty) {
+        final p = res.stdout.toString().trim();
+        if (await File(p).exists()) return p;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<void> _downloadViaHttp(String downloadUrl, String targetPath, DesktopDownloadItem item) async {
+    final client = http.Client();
+    try {
+      final request = http.Request('GET', Uri.parse(downloadUrl));
+      request.headers['User-Agent'] =
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+      final response = await client.send(request);
+      final total = response.contentLength ?? 0;
+      int received = 0;
+      final file = File(targetPath);
+      final sink = file.openWrite();
+      DateTime lastUpdate = DateTime.now();
+
+      await response.stream.listen((chunk) {
+        sink.add(chunk);
+        received += chunk.length;
+        final now = DateTime.now();
+        if (total > 0 && now.difference(lastUpdate).inMilliseconds >= 250) {
+          lastUpdate = now;
+          if (mounted) {
+            setState(() {
+              item.progress = (received / total).clamp(0.0, 1.0);
+              item.statusText = '${(item.progress * 100).toStringAsFixed(1)}%';
+            });
+          }
+        }
+      }).asFuture();
+
+      await sink.flush();
+      await sink.close();
+
+      if (mounted) {
+        setState(() {
+          item.isDownloading = false;
+          item.progress = 1.0;
+          item.statusText = 'status_complete'.tr;
+          item.localPath = targetPath;
+        });
+      }
+    } finally {
+      client.close();
+    }
+  }
+
   Future<void> _startDownload(DesktopDownloadItem item) async {
     if (item.isDownloading) return;
 
+    final saveDir = _storage.getDownloadPath();
+    final dir = Directory(saveDir);
+    if (!await dir.exists()) {
+      await dir.create(recursive: true);
+    }
+
+    final cleanTitle = _sanitizeFileName(item.video.title);
+    final targetPath = '$saveDir/$cleanTitle.mp4';
+
     setState(() {
       item.isDownloading = true;
-      item.statusText = 'status_download_progress'.tr;
+      item.progress = 0.0;
+      item.statusText = 'downloading'.tr;
+      item.localPath = targetPath;
     });
 
-    try {
-      final saveDir = _storage.getDownloadPath();
-      final targetPath = '$saveDir/${item.video.title}.mp4';
+    final ytDlpPath = await _getYtDlpPath();
+    final isDirectMedia = item.video.url.toLowerCase().endsWith('.mp4') ||
+        item.video.url.toLowerCase().endsWith('.mov') ||
+        item.video.url.toLowerCase().endsWith('.m4v') ||
+        item.video.url.toLowerCase().endsWith('.webm');
 
-      final task = await _downloadService.enqueueNewTask(
-        item.video,
-        quality: '720p',
-        format: 'mp4',
-        savePath: targetPath,
-      );
+    if (ytDlpPath != null && !isDirectMedia) {
+      try {
+        final args = [
+          '--newline',
+          '--no-part',
+          '-f', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+          '--merge-output-format', 'mp4',
+          '-o', targetPath,
+          item.video.url,
+        ];
 
-      item.localPath = targetPath;
+        Logger.d('Starting yt-dlp download: $ytDlpPath ${args.join(' ')}');
+        final process = await Process.start(ytDlpPath, args);
+        DateTime lastSetState = DateTime.now();
 
-      if (task != null) {
-        // 绑定下载更新监听
-        final sub = _downloadService.tasks.listen((taskList) {
-          final current = taskList.firstWhereOrNull((t) => t.id == task.id);
-          if (current != null && mounted) {
-            setState(() {
-              item.progress = current.progress;
-              if (current.status == DownloadStatus.completed) {
-                item.isDownloading = false;
-                item.progress = 1.0;
-                item.statusText = 'status_complete'.tr;
-              } else if (current.status == DownloadStatus.failed) {
-                item.isDownloading = false;
-                item.statusText = 'status_failed'.tr;
+        process.stdout.transform(utf8.decoder).listen((line) {
+          final pctMatch = RegExp(r'\[download\]\s+([\d\.]+)%').firstMatch(line);
+          final speedMatch = RegExp(r'at\s+([^\s]+(?:KiB|MiB|GiB|B)/s)').firstMatch(line);
+          final etaMatch = RegExp(r'ETA\s+([\d:]+)').firstMatch(line);
+
+          if (pctMatch != null) {
+            final pct = double.tryParse(pctMatch.group(1) ?? '0') ?? 0.0;
+            final now = DateTime.now();
+            if (now.difference(lastSetState).inMilliseconds >= 250 || pct >= 100.0) {
+              lastSetState = now;
+              if (mounted) {
+                setState(() {
+                  item.progress = (pct / 100.0).clamp(0.0, 1.0);
+                  String info = '${pct.toStringAsFixed(1)}%';
+                  if (speedMatch != null) info += ' | ${speedMatch.group(1)}';
+                  if (etaMatch != null) info += ' | ETA: ${etaMatch.group(1)}';
+                  item.statusText = info;
+                });
               }
-            });
+            }
           }
         });
 
-        // 模拟进度保底显示
-        Future.delayed(const Duration(seconds: 3), () {
-          if (mounted && item.progress == 0) {
+        final exitCode = await process.exitCode;
+        if (exitCode == 0 && await File(targetPath).exists()) {
+          if (mounted) {
             setState(() {
-              item.progress = 1.0;
               item.isDownloading = false;
+              item.progress = 1.0;
               item.statusText = 'status_complete'.tr;
             });
-            sub.cancel();
           }
+          return;
+        } else {
+          Logger.w('yt-dlp exited with $exitCode, trying fallback');
+        }
+      } catch (e) {
+        Logger.e('Error with yt-dlp download: $e');
+      }
+    }
+
+    // 回退到流式 HTTP 直链下载
+    try {
+      String downloadUrl = item.video.url;
+      if (item.video.qualities.isNotEmpty && item.video.qualities.first.url.startsWith('http')) {
+        downloadUrl = item.video.qualities.first.url;
+      }
+      await _downloadViaHttp(downloadUrl, targetPath, item);
+    } catch (e) {
+      Logger.e('Error downloading video: $e');
+      if (mounted) {
+        setState(() {
+          item.isDownloading = false;
+          item.statusText = 'status_failed'.tr;
         });
       }
-    } catch (e) {
-      setState(() {
-        item.isDownloading = false;
-        item.statusText = 'status_failed'.tr;
-      });
     }
   }
 
@@ -187,6 +302,12 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
   }
 
   void _openFileDirectory(String? filePath) async {
+    if (filePath != null && await File(filePath).exists()) {
+      if (Platform.isMacOS) {
+        await Process.run('open', ['-R', filePath]);
+        return;
+      }
+    }
     final dir = filePath != null ? File(filePath).parent.path : _storage.getDownloadPath();
     if (Platform.isMacOS) {
       await Process.run('open', [dir]);
