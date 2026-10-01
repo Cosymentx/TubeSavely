@@ -38,7 +38,7 @@ dependencies:
   # GetX 核心
   get: ^4.7.2
   get_storage: ^2.1.1
-  flutter_secure_storage: ^11.2.0
+  flutter_secure_storage: ^10.3.4
 
   # 网络和数据
   http: ^1.2.2
