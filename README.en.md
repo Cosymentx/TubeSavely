@@ -18,15 +18,13 @@
 
 ## 🌐 TubeSavely Ecosystem
 
-TubeSavely is a suite of cross-platform video download tools, built across three repositories:
+TubeSavely is a complete cross-platform audio and video download solution composed of three deeply integrated core projects:
 
-| Project | Stack | Description | Link |
-|---------|-------|-------------|------|
-| **TubeSavely** | Flutter | Cross-platform desktop & mobile client (Windows / macOS / Linux / iOS / Android) | [![GitHub](https://img.shields.io/badge/GitHub-TubeSavely-181717?logo=github)](https://github.com/Cosymentx/TubeSavely) |
-| **TubeSavely-Vue** | Vue 3 | Web client — use directly in any browser | [![GitHub](https://img.shields.io/badge/GitHub-TubeSavely--Vue-181717?logo=github)](https://github.com/Cosymentx/TubeSavely-Vue) |
-| **TubeSavely-Server** | Python | Backend API for video parsing, users, credits, and payments | [![GitHub](https://img.shields.io/badge/GitHub-TubeSavely--Server-181717?logo=github)](https://github.com/Cosymentx/TubeSavely-Server) |
-
-[Open the web client](https://tube-savely-vue.vercel.app) · [Browse the API documentation](https://tube-savely-server.vercel.app/docs)
+| Project / Client | Tech Stack | Role & Responsibility | Repository | Live Demo / Artifacts |
+| :--- | :--- | :--- | :--- | :--- |
+| **TubeSavely** (Current) | Flutter 3 + Dart | Native iOS / Android / Windows / macOS / Linux client with video conversion and compression | [![GitHub](https://img.shields.io/badge/GitHub-TubeSavely-02569B?logo=flutter)](https://github.com/Cosymentx/TubeSavely) | [Releases](https://github.com/Cosymentx/TubeSavely/releases) |
+| **TubeSavely-Vue** | Vue 3 + TypeScript + Vite | Modern responsive Web client for instant parsing, format filtering, and downloading | [![GitHub](https://img.shields.io/badge/GitHub-TubeSavely--Vue-4FC08D?logo=vuedotjs)](https://github.com/Cosymentx/TubeSavely-Vue) | [Live Web App](https://tube-savely-vue.vercel.app) |
+| **TubeSavely-Server** | Python 3 + FastAPI + yt-dlp | Core media parsing engine, background task queue, multi-platform extractors, credits and payment API | [![GitHub](https://img.shields.io/badge/GitHub-TubeSavely--Server-3776AB?logo=python)](https://github.com/Cosymentx/TubeSavely-Server) | [Swagger API Docs](https://tube-savely-server.vercel.app/docs) |
 
 ---
 
