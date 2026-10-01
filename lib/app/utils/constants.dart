@@ -2,10 +2,11 @@ class Constants {
   Constants._();
 
   // API
-  static const String API_BASE_URL = 'https://api.tubesavely.cosyment.com';
-  static const String PARSE_API_BASE_URL = 'https://tube-savely-server.vercel.app';
-  static const int API_TIMEOUT = 30000; // 30秒
-  static const int API_RETRY_COUNT = 3;
+  static const String API_BASE_URL = 'https://tubesavely-server.vercel.app';
+  static const String PARSE_API_BASE_URL = 'https://tubesavely-server.vercel.app';
+  static const String WEB_URL = 'https://tubesavely-vue.vercel.app/';
+  static const int API_TIMEOUT = 15000; // 15秒
+  static const int API_RETRY_COUNT = 2;
 
   // 第三方API密钥
   static const String YOUTUBE_API_KEY =

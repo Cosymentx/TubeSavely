@@ -239,7 +239,7 @@ class _DesktopCompressViewState extends State<DesktopCompressView>
                   itemCount: tasks.length,
                   itemBuilder: (context, index) {
                     final task = tasks[index];
-                    return _buildTaskCard(task);
+                    return _buildTaskCard(task, key: ValueKey(task.id));
                   },
                 );
               }),
@@ -375,7 +375,7 @@ class _DesktopCompressViewState extends State<DesktopCompressView>
     );
   }
 
-  Widget _buildTaskCard(CompressTask task) {
+  Widget _buildTaskCard(CompressTask task, {Key? key}) {
     final theme = Theme.of(context);
     final primaryColor = theme.primaryColor;
     final isCompressing = task.status == CompressTaskStatus.compressing;
@@ -405,6 +405,7 @@ class _DesktopCompressViewState extends State<DesktopCompressView>
     }
 
     return Container(
+      key: key,
       margin: const EdgeInsets.only(bottom: 12),
       height: 94,
       decoration: BoxDecoration(
@@ -508,40 +509,46 @@ class _DesktopCompressViewState extends State<DesktopCompressView>
             mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
-                iconSize: 20,
-                splashRadius: 18,
-                tooltip: isCompressing ? 'cancel'.tr : 'retry'.tr,
+                iconSize: 24,
+                splashRadius: 22,
+                tooltip: isCompressing
+                    ? 'cancel'.tr
+                    : (isFailed ? 'retry'.tr : (isCompleted ? 'completed'.tr : 'start_compress'.tr)),
                 icon: isCompressing
                     ? SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: primaryColor),
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2.2, color: primaryColor),
                       )
                     : Icon(
-                        isCompleted ? Icons.check_circle_outline : Icons.play_arrow_outlined,
-                        color: isCompleted ? Colors.green : primaryColor,
+                        isCompleted
+                            ? Icons.check_circle_outline
+                            : (isFailed ? Icons.replay : Icons.play_arrow_rounded),
+                        color: isCompleted
+                            ? Colors.green.shade600
+                            : (isFailed ? Colors.red.shade600 : primaryColor),
                       ),
                 onPressed: isCompressing
                     ? () => _compressController.cancelTask(task.id)
                     : () => _compressController.retryTask(task.id),
               ),
               IconButton(
-                iconSize: 20,
-                splashRadius: 18,
+                iconSize: 24,
+                splashRadius: 22,
                 tooltip: '打开所在目录',
                 icon: Icon(
                   Icons.folder_open,
-                  color: theme.colorScheme.onSurface.withOpacity(0.5),
+                  color: theme.colorScheme.onSurface.withOpacity(0.65),
                 ),
                 onPressed: () => _openFileDirectory(task.targetPath),
               ),
               IconButton(
-                iconSize: 20,
-                splashRadius: 18,
+                iconSize: 24,
+                splashRadius: 22,
                 tooltip: 'delete',
                 icon: Icon(
                   Icons.delete_outline,
-                  color: theme.colorScheme.onSurface.withOpacity(0.5),
+                  color: theme.colorScheme.onSurface.withOpacity(0.65),
                 ),
                 onPressed: () {
                   _compressController.removeTask(task.id);

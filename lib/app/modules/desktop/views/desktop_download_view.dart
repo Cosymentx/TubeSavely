@@ -7,6 +7,7 @@ import '../../../data/models/download_task_model.dart';
 import '../../../data/models/video_model.dart';
 import '../../../data/providers/api_provider.dart';
 import '../../../data/providers/storage_provider.dart';
+import '../../../data/repositories/video_repository.dart';
 import '../../../services/download_service.dart';
 import '../../../utils/logger.dart';
 import '../../../utils/utils.dart';
@@ -40,6 +41,7 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
   final ApiProvider _apiProvider = Get.find<ApiProvider>();
   final StorageProvider _storage = Get.find<StorageProvider>();
   final DownloadService _downloadService = Get.find<DownloadService>();
+  final VideoRepository _videoRepository = Get.find<VideoRepository>();
 
   final List<DesktopDownloadItem> _items = [];
   bool _isParsing = false;
@@ -71,25 +73,13 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
         _isParsing = true;
       });
 
-      // 调用后端解析接口
-      final response = await _apiProvider.parseVideo(text);
-      if (response.isOk && response.body != null) {
-        final data = response.body;
-        final videoData = data is Map<String, dynamic> && data.containsKey('data')
-            ? data['data']
-            : data;
+      // 优先调用 VideoRepository 进行解析（本地解析器优先，后端 API 回退）
+      final video = await _videoRepository.parseVideo(text).timeout(
+        const Duration(seconds: 12),
+        onTimeout: () => null,
+      );
 
-        VideoModel video;
-        if (videoData is Map<String, dynamic>) {
-          video = VideoModel.fromJson(videoData);
-        } else {
-          video = VideoModel(
-            id: DateTime.now().millisecondsSinceEpoch.toString(),
-            title: text.split('/').last,
-            url: text,
-          );
-        }
-
+      if (video != null) {
         setState(() {
           _items.add(DesktopDownloadItem(
             video: video,
@@ -97,12 +87,14 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
           ));
         });
       } else {
-        // 本地降级：直接以 URL 作为单任务
+        // 本地降级：直接以 URL 作为单任务加入列表
+        final rawTitle = text.split('?').first.split('/').last.trim();
+        final fallbackTitle = rawTitle.isNotEmpty ? rawTitle : 'Video_${DateTime.now().millisecondsSinceEpoch}';
         setState(() {
           _items.add(DesktopDownloadItem(
             video: VideoModel(
               id: DateTime.now().millisecondsSinceEpoch.toString(),
-              title: text.split('?').first.split('/').last,
+              title: fallbackTitle,
               url: text,
             ),
             statusText: 'status_download_progress'.tr,
@@ -270,7 +262,8 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
                       padding: const EdgeInsets.all(12),
                       itemCount: _items.length,
                       itemBuilder: (context, index) {
-                        return _buildDownloadItemCard(_items[index]);
+                        final item = _items[index];
+                        return _buildDownloadItemCard(item, key: ValueKey('${item.video.url}_${item.video.id}'));
                       },
                     ),
             ),
@@ -280,11 +273,12 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
     );
   }
 
-  Widget _buildDownloadItemCard(DesktopDownloadItem item) {
+  Widget _buildDownloadItemCard(DesktopDownloadItem item, {Key? key}) {
     final theme = Theme.of(context);
     final primaryColor = theme.primaryColor;
 
     return Container(
+      key: key,
       margin: const EdgeInsets.only(bottom: 12),
       height: 94,
       decoration: BoxDecoration(
@@ -399,8 +393,9 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
             mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
-                iconSize: 20,
-                splashRadius: 18,
+                iconSize: 24,
+                splashRadius: 22,
+                tooltip: item.isDownloading ? 'downloading'.tr : 'download'.tr,
                 icon: Icon(
                   item.isDownloading ? Icons.hourglass_top : Icons.file_download_outlined,
                   color: primaryColor,
@@ -408,20 +403,22 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
                 onPressed: () => _startDownload(item),
               ),
               IconButton(
-                iconSize: 20,
-                splashRadius: 18,
+                iconSize: 24,
+                splashRadius: 22,
+                tooltip: '打开所在目录',
                 icon: Icon(
                   Icons.folder_open,
-                  color: theme.colorScheme.onSurface.withOpacity(0.5),
+                  color: theme.colorScheme.onSurface.withOpacity(0.65),
                 ),
                 onPressed: () => _openFileDirectory(item.localPath),
               ),
               IconButton(
-                iconSize: 20,
-                splashRadius: 18,
+                iconSize: 24,
+                splashRadius: 22,
+                tooltip: 'delete',
                 icon: Icon(
                   Icons.delete_outline,
-                  color: theme.colorScheme.onSurface.withOpacity(0.5),
+                  color: theme.colorScheme.onSurface.withOpacity(0.65),
                 ),
                 onPressed: () {
                   setState(() {

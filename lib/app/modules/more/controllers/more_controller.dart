@@ -21,9 +21,9 @@ class MoreController extends GetxController {
   // 开发者信息
   final String developerName = 'TubeSavely Team';
   final String developerEmail = 'support@tubesavely.com';
-  final String websiteUrl = 'https://tubesavely.cosyment.com';
-  final String privacyPolicyUrl = 'https://tubesavely.cosyment.com/privacy';
-  final String termsOfServiceUrl = 'https://tubesavely.cosyment.com/terms';
+  final String websiteUrl = 'https://tubesavely-vue.vercel.app/';
+  final String privacyPolicyUrl = 'https://tubesavely-vue.vercel.app/privacy';
+  final String termsOfServiceUrl = 'https://tubesavely-vue.vercel.app/terms';
 
   // 社交媒体链接
   final String githubUrl = 'https://github.com/tubesavely';

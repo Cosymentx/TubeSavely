@@ -136,38 +136,23 @@ class FFmpegCommandBuilder {
       return;
     }
 
-    // CRF 质量模式
+    // CRF 质量压缩模式（使用工业标准 libx264/libx265，压缩比最高且稳定不崩溃）
     final crf = config.crf;
+    final codec = config.codec == VideoCodecType.h265 ? 'libx265' : 'libx264';
+    // 桌面端使用 veryfast 或 faster 兼顾极致压缩率与飞快编码速度
+    final presetSpeed = config.preset == CompressPreset.small
+        ? 'faster'
+        : (config.preset == CompressPreset.quality ? 'medium' : 'veryfast');
 
-    if (isMac && useHw) {
-      // macOS VideoToolbox 硬件编码器使用 -q:v (1-100，越小画质越高)
-      // CRF 18~35 映射至 VideoToolbox 的 q:v (40~85)
-      final qv = (crf * 2.2).clamp(30, 85).round();
-      final codec = config.codec == VideoCodecType.h265
-          ? 'hevc_videotoolbox'
-          : 'h264_videotoolbox';
-      args.addAll([
-        '-c:v',
-        codec,
-        '-q:v',
-        '$qv',
-        '-pix_fmt',
-        'yuv420p',
-      ]);
-    } else {
-      // 跨平台 CPU 软解压（通用性与压缩比最高）
-      final codec = config.codec == VideoCodecType.h265 ? 'libx265' : 'libx264';
-      final presetSpeed = config.preset == CompressPreset.small ? 'faster' : 'medium';
-      args.addAll([
-        '-c:v',
-        codec,
-        '-crf',
-        '$crf',
-        '-preset',
-        presetSpeed,
-        '-pix_fmt',
-        'yuv420p',
-      ]);
-    }
+    args.addAll([
+      '-c:v',
+      codec,
+      '-crf',
+      '$crf',
+      '-preset',
+      presetSpeed,
+      '-pix_fmt',
+      'yuv420p',
+    ]);
   }
 }
