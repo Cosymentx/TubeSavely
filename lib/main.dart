@@ -58,6 +58,36 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 桌面平台：直接使用原生桌面缩放，启动原生专属 DesktopHomeView，绝不套用移动端 360px 缩放
+    if (!GetPlatform.isMobile) {
+      return GetMaterialApp(
+        title: 'TubeSavely',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: ThemeMode.system,
+        initialRoute: Routes.DESKTOP_HOME,
+        getPages: AppPages.routes,
+        defaultTransition: Transition.fade,
+        transitionDuration: const Duration(milliseconds: 200),
+        translations: AppTranslations(),
+        locale: Get.deviceLocale ?? const Locale('zh', 'CN'),
+        fallbackLocale: const Locale('en', 'US'),
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('zh', 'CN'),
+          Locale('en', 'US'),
+          Locale('ja', 'JP'),
+          Locale('ko', 'KR'),
+        ],
+      );
+    }
+
+    // 移动平台：保持适合手机竖屏的自适应缩放
     return ScreenUtilInit(
       designSize: const Size(360, 690),
       minTextAdapt: true,

@@ -41,6 +41,7 @@ import '../modules/video/detail/bindings/video_detail_binding.dart';
 import '../modules/video/detail/views/video_detail_view.dart';
 import '../modules/video/player/bindings/video_player_binding.dart';
 import '../modules/video/player/views/video_player_view.dart';
+import '../modules/desktop/views/desktop_home_view.dart';
 
 part 'app_routes.dart';
 
@@ -154,6 +155,10 @@ class AppPages {
       name: _Paths.COMPRESS,
       page: () => const CompressView(),
       binding: CompressBinding(),
+    ),
+    GetPage(
+      name: _Paths.DESKTOP_HOME,
+      page: () => const DesktopHomeView(),
     ),
   ];
 }

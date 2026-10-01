@@ -120,6 +120,25 @@ class StorageProvider extends GetxService {
     return ThemeMode.values[index];
   }
 
+  Future<void> setThemeModeName(String mode) async {
+    if (mode == 'dark') {
+      await saveThemeMode(ThemeMode.dark);
+    } else if (mode == 'light') {
+      await saveThemeMode(ThemeMode.light);
+    } else {
+      await saveThemeMode(ThemeMode.system);
+    }
+  }
+
+  // 下载路径设置便捷方法
+  String getDownloadPath() {
+    return getSetting('download_path', defaultValue: '') as String? ?? '';
+  }
+
+  Future<void> setDownloadPath(String path) async {
+    await saveSetting('download_path', path);
+  }
+
   // 应用设置
   Future<void> saveSetting(String key, dynamic value) async {
     final Map<String, dynamic> settings = getSettings();
