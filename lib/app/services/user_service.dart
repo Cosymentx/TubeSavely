@@ -46,7 +46,7 @@ class UserService extends GetxService {
       Logger.d('User login: $email');
 
       final response = await _apiProvider.login(email, password);
-      Logger.d("User login response: ${response.bodyString}");
+      Logger.d('User login response received');
 
       // 处理API响应
       final apiResponse =
@@ -109,7 +109,7 @@ class UserService extends GetxService {
       Logger.d('User register: $email');
 
       final response = await _apiProvider.register(email, password, name);
-      Logger.d("User register response: ${response.bodyString}");
+      Logger.d('User register response received');
 
       // 处理API响应
       final apiResponse =
@@ -375,7 +375,7 @@ class UserService extends GetxService {
 
       // 调用 API
       final response = await _apiProvider.loginWithApple(data);
-      Logger.d("Apple login response: ${response.bodyString}");
+      Logger.d('Apple login response received');
 
       // 处理API响应
       final apiResponse =
@@ -448,7 +448,7 @@ class UserService extends GetxService {
 
       // 调用 API
       final response = await _apiProvider.loginWithGoogle(data);
-      Logger.d("Google login response: ${response.bodyString}");
+      Logger.d('Google login response received');
 
       // 处理API响应
       final apiResponse =
