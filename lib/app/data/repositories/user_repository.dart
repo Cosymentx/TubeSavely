@@ -68,7 +68,7 @@ class UserRepository {
   }
 
   // 获取用户令牌
-  String? getUserToken() {
+  Future<String?> getUserToken() {
     return _storageProvider.getUserToken();
   }
 
@@ -78,8 +78,8 @@ class UserRepository {
   }
 
   // 检查用户是否已登录
-  bool isLoggedIn() {
-    final token = getUserToken();
+  Future<bool> isLoggedIn() async {
+    final token = await getUserToken();
     return token != null && token.isNotEmpty;
   }
 
