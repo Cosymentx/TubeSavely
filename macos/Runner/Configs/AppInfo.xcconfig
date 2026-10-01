@@ -12,3 +12,7 @@ PRODUCT_BUNDLE_IDENTIFIER = com.xhx.tubesavely
 
 // The copyright displayed in application information
 PRODUCT_COPYRIGHT = Copyright © 2023 TubeSavely. All rights reserved.
+
+// Code Signing settings for CI / Local builds
+CODE_SIGN_STYLE = Manual
+CODE_SIGN_IDENTITY = -

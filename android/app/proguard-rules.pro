@@ -282,10 +282,13 @@
 -dontwarn com.stripe.android.pushProvisioning.PushProvisioningEphemeralKeyProvider
 
 
-#忽略警告
+# 忽略警告
 -dontwarn com.fm.openinstall.**
 -dontwarn io.openinstall.**
-#避免混淆
+# 避免混淆
 -keep public class com.fm.openinstall.** {*; }
 -keep public interface com.fm.openinstall.** {*; }
 -dontwarn javax.xml.stream.XMLStreamException
+-dontwarn com.google.android.gms.common.annotation.NoNullnessRewrite
+-dontwarn com.google.android.gms.**
+-dontwarn com.google.android.play.core.**

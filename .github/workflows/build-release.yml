@@ -271,6 +271,7 @@ jobs:
       - build-macos
       - build-windows
       - build-linux
+    if: always() && needs.test.result == 'success' && !contains(needs.*.result, 'cancelled')
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -292,6 +293,10 @@ jobs:
           path: release-dist
           merge-multiple: true
 
+      - name: Check Artifacts
+        run: |
+          ls -la release-dist || true
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -304,22 +309,10 @@ jobs:
             - **Commit:** ${{ github.sha }}
             - **Branch:** ${{ github.ref_name }}
 
-            #### 📦 Release Binaries:
-            - **Android:** `app-release.apk`
-            - **iOS:** `TubeSavely-iOS-unsigned.ipa`
-            - **macOS:** `TubeSavely-macOS.zip`
-            - **Windows:** `TubeSavely-windows-x64.zip`
-            - **Linux:** `TubeSavely-linux-x64.tar.gz`
-
             > 由 GitHub Actions 自动化并发打包并发布。
             > ✅ 静态检查与单元测试全部通过。
           draft: false
           prerelease: false
-          files: |
-            release-dist/app-release.apk
-            release-dist/TubeSavely-iOS-unsigned.ipa
-            release-dist/TubeSavely-macOS.zip
-            release-dist/TubeSavely-windows-x64.zip
-            release-dist/TubeSavely-linux-x64.tar.gz
+          files: release-dist/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
