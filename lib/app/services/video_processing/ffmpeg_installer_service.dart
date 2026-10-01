@@ -109,6 +109,11 @@ class FFmpegInstallerService {
       final binDir = await getAppFFmpegBinDir();
       final appFFmpegFile = File(p.join(binDir, Platform.isWindows ? 'ffmpeg.exe' : 'ffmpeg'));
       if (await appFFmpegFile.exists()) {
+        if (Platform.isMacOS) {
+          try {
+            await Process.run('xattr', ['-cr', binDir]);
+          } catch (_) {}
+        }
         _cachedFfmpegPath = appFFmpegFile.path;
         return _cachedFfmpegPath;
       }
@@ -236,13 +241,20 @@ class FFmpegInstallerService {
       _message = 'ffmpeg_setting_up'.tr;
       onProgress?.call(_status, 0.95, _message);
 
-      // 非 Windows 赋予可执行权限
+      // 非 Windows 赋予可执行权限并清理 macOS 隔离属性
       if (!Platform.isWindows) {
         final ffmpegPath = p.join(binDir, 'ffmpeg');
         final ffprobePath = p.join(binDir, 'ffprobe');
         await Process.run('chmod', ['+x', ffmpegPath]);
         if (await File(ffprobePath).exists()) {
           await Process.run('chmod', ['+x', ffprobePath]);
+        }
+        if (Platform.isMacOS) {
+          try {
+            await Process.run('xattr', ['-cr', binDir]);
+          } catch (e) {
+            Logger.w('Failed to clear quarantine attributes: $e');
+          }
         }
       }
 
