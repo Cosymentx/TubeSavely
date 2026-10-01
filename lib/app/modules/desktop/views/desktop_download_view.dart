@@ -244,8 +244,9 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
       item.localPath = targetPath;
     });
 
+    final token = await _storage.getUserToken();
     final mediaRequest = MediaDownloadRequest.forVideo(
-        item.video, _storage.getUserToken(),
+        item.video, token,
         format: 'mp4');
     if (mediaRequest.method == 'POST') {
       try {
