@@ -3,7 +3,8 @@ import 'package:get/get.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../controllers/history_controller.dart';
-import '../../../theme/app_theme.dart';
+import '../../../theme/app_colors.dart';
+import '../../../theme/app_text_styles.dart';
 import '../../../data/models/video_model.dart';
 
 class HistoryView extends GetView<HistoryController> {
@@ -15,10 +16,7 @@ class HistoryView extends GetView<HistoryController> {
       appBar: AppBar(
         title: Text(
           '下载历史',
-          style: TextStyle(
-            fontSize: 18.sp,
-            fontWeight: FontWeight.bold,
-          ),
+          style: AppTextStyles.titleLarge,
         ),
         centerTitle: true,
         elevation: 0,
@@ -60,13 +58,13 @@ class HistoryView extends GetView<HistoryController> {
         if (controller.isEditing.value) {
           return FloatingActionButton(
             onPressed: controller.toggleEditMode,
-            backgroundColor: AppTheme.primaryColor,
+            backgroundColor: AppColors.primary,
             child: Icon(Icons.check),
           );
         } else {
           return FloatingActionButton(
             onPressed: _showClearHistoryConfirmation,
-            backgroundColor: AppTheme.primaryColor,
+            backgroundColor: AppColors.primary,
             child: Icon(Icons.delete_sweep),
           );
         }
@@ -115,14 +113,13 @@ class HistoryView extends GetView<HistoryController> {
               Icon(
                 Icons.history,
                 size: 64.sp,
-                color: Get.theme.colorScheme.onBackground.withOpacity(0.3),
+                color: AppColors.textSecondary.withAlpha(76),
               ),
               SizedBox(height: 16.h),
               Text(
                 '暂无下载历史',
-                style: TextStyle(
-                  fontSize: 16.sp,
-                  color: Get.theme.colorScheme.onBackground.withOpacity(0.5),
+                style: AppTextStyles.bodyLarge.copyWith(
+                  color: AppColors.textSecondary,
                 ),
               ),
             ],
@@ -145,15 +142,13 @@ class HistoryView extends GetView<HistoryController> {
   Widget _buildHistoryItem(VideoModel video) {
     return Obx(() {
       final isSelected = controller.isSelected(video);
-      
+
       return Card(
         margin: EdgeInsets.only(bottom: 12.h),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12.r),
           side: BorderSide(
-            color: isSelected
-                ? AppTheme.primaryColor
-                : Get.theme.colorScheme.onSurface.withOpacity(0.1),
+            color: isSelected ? AppColors.primary : AppColors.border,
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -175,7 +170,7 @@ class HistoryView extends GetView<HistoryController> {
                           height: 70.h,
                           fit: BoxFit.cover,
                           placeholder: (context, url) => Container(
-                            color: Colors.grey[300],
+                            color: AppColors.surfaceVariant,
                             child: Center(
                               child: CircularProgressIndicator(
                                 strokeWidth: 2.w,
@@ -183,20 +178,20 @@ class HistoryView extends GetView<HistoryController> {
                             ),
                           ),
                           errorWidget: (context, url, error) => Container(
-                            color: Colors.grey[300],
+                            color: AppColors.surfaceVariant,
                             child: Icon(
                               Icons.error,
-                              color: Colors.grey[500],
+                              color: AppColors.textSecondary,
                             ),
                           ),
                         )
                       : Container(
                           width: 100.w,
                           height: 70.h,
-                          color: Colors.grey[300],
+                          color: AppColors.surfaceVariant,
                           child: Icon(
                             Icons.video_library,
-                            color: Colors.grey[500],
+                            color: AppColors.textSecondary,
                           ),
                         ),
                 ),
@@ -208,10 +203,8 @@ class HistoryView extends GetView<HistoryController> {
                     children: [
                       Text(
                         video.title,
-                        style: TextStyle(
-                          fontSize: 14.sp,
+                        style: AppTextStyles.bodyMedium.copyWith(
                           fontWeight: FontWeight.w500,
-                          color: Get.theme.colorScheme.onSurface,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -222,28 +215,26 @@ class HistoryView extends GetView<HistoryController> {
                           Icon(
                             Icons.videocam,
                             size: 14.sp,
-                            color: Get.theme.colorScheme.onSurface.withOpacity(0.6),
+                            color: AppColors.textSecondary,
                           ),
                           SizedBox(width: 4.w),
                           Text(
                             video.platform ?? '未知平台',
-                            style: TextStyle(
-                              fontSize: 12.sp,
-                              color: Get.theme.colorScheme.onSurface.withOpacity(0.6),
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.textSecondary,
                             ),
                           ),
                           SizedBox(width: 8.w),
                           Icon(
                             Icons.access_time,
                             size: 14.sp,
-                            color: Get.theme.colorScheme.onSurface.withOpacity(0.6),
+                            color: AppColors.textSecondary,
                           ),
                           SizedBox(width: 4.w),
                           Text(
                             video.formattedDuration,
-                            style: TextStyle(
-                              fontSize: 12.sp,
-                              color: Get.theme.colorScheme.onSurface.withOpacity(0.6),
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.textSecondary,
                             ),
                           ),
                         ],
@@ -252,9 +243,8 @@ class HistoryView extends GetView<HistoryController> {
                       if (video.createdAt != null)
                         Text(
                           '添加时间: ${_formatDateTime(video.createdAt!)}',
-                          style: TextStyle(
-                            fontSize: 12.sp,
-                            color: Get.theme.colorScheme.onSurface.withOpacity(0.6),
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.textSecondary,
                           ),
                         ),
                     ],
@@ -269,8 +259,8 @@ class HistoryView extends GetView<HistoryController> {
                           ? Icons.check_circle
                           : Icons.radio_button_unchecked,
                       color: isSelected
-                          ? AppTheme.primaryColor
-                          : Get.theme.colorScheme.onSurface.withOpacity(0.3),
+                          ? AppColors.primary
+                          : AppColors.textSecondary.withAlpha(76),
                       size: 24.sp,
                     ),
                   ),
@@ -286,7 +276,7 @@ class HistoryView extends GetView<HistoryController> {
   String _formatDateTime(DateTime dateTime) {
     final now = DateTime.now();
     final difference = now.difference(dateTime);
-    
+
     if (difference.inDays > 365) {
       return '${(difference.inDays / 365).floor()}年前';
     } else if (difference.inDays > 30) {
@@ -319,7 +309,7 @@ class HistoryView extends GetView<HistoryController> {
               controller.clearHistory();
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryColor,
+              backgroundColor: AppColors.primary,
             ),
             child: Text('确定'),
           ),

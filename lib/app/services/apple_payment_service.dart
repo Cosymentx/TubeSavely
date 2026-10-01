@@ -1,11 +1,11 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
+import 'dart:io';
 import 'package:get/get.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:tubesavely/app/data/models/payment_model.dart';
 import 'package:tubesavely/app/data/providers/api_provider.dart';
 import 'package:tubesavely/app/utils/logger.dart';
-import 'package:tubesavely/app/utils/utils.dart';
+import 'package:flutter/foundation.dart';
 
 /// Apple支付服务
 ///
@@ -13,43 +13,103 @@ import 'package:tubesavely/app/utils/utils.dart';
 class ApplePaymentService extends GetxService {
   final ApiProvider _apiProvider = Get.find<ApiProvider>();
 
-  // In-App Purchase
+  // In-App Purchase实例
   late final InAppPurchase _inAppPurchase;
+
+  // 购买更新订阅
   StreamSubscription<List<PurchaseDetails>>? _subscription;
 
-  // 是否可用
-  final RxBool isAvailable = false.obs;
-
-  // 当前处理的订单
+  // 当前订单
   OrderModel? _currentOrder;
 
   // 支付结果回调
   Function(bool success, String? errorMessage)? _paymentCallback;
 
+  // 是否可用
+  final RxBool isAvailable = false.obs;
+
+  // 商品列表
+  final RxList<ProductDetails> products = <ProductDetails>[].obs;
+
   /// 初始化服务
   Future<ApplePaymentService> init() async {
     Logger.d('ApplePaymentService initialized');
 
-    // 初始化In-App Purchase
-    _inAppPurchase = InAppPurchase.instance;
-    isAvailable.value = await _inAppPurchase.isAvailable();
+    try {
+      // 检查平台
+      if (Platform.isIOS || Platform.isMacOS) {
+        try {
+          // 初始化In-App Purchase
+          _inAppPurchase = InAppPurchase.instance;
 
-    if (isAvailable.value) {
-      // 监听购买更新
-      _subscription = _inAppPurchase.purchaseStream.listen(
-        _listenToPurchaseUpdated,
-        onDone: () {
-          _subscription?.cancel();
-        },
-        onError: (error) {
-          Logger.e('Error in purchase stream: $error');
-        },
-      );
-    } else {
-      Logger.w('In-App Purchase is not available');
+          // 检查是否可用
+          isAvailable.value = await _inAppPurchase.isAvailable();
+
+          if (isAvailable.value) {
+            // 监听购买更新
+            _subscription = _inAppPurchase.purchaseStream.listen(
+              _listenToPurchaseUpdated,
+              onDone: () {
+                _subscription?.cancel();
+              },
+              onError: (error) {
+                Logger.e('Error in purchase stream: $error');
+              },
+            );
+
+            // 加载商品
+            await _loadProducts();
+
+            Logger.d('Apple Payment Service initialized successfully');
+          } else {
+            Logger.d('In-App Purchase is not available on this device');
+          }
+        } catch (e) {
+          Logger.e('Error initializing Apple Payment Service: $e');
+          isAvailable.value = false;
+        }
+      } else {
+        Logger.d('Apple Payment Service not available on this platform');
+        isAvailable.value = false;
+      }
+    } catch (e) {
+      // 捕获所有异常，确保服务初始化不会失败
+      Logger.e('Unexpected error in Apple Payment Service init: $e');
+      isAvailable.value = false;
     }
 
     return this;
+  }
+
+  /// 加载商品
+  Future<void> _loadProducts() async {
+    try {
+      // 商品ID列表
+      final Set<String> productIds = {
+        'membership_monthly',
+        'membership_quarterly',
+        'membership_yearly',
+        'membership_pro_monthly',
+        'membership_pro_yearly',
+        'credits_100',
+        'credits_300',
+        'credits_500',
+        'credits_1000',
+      };
+
+      // 加载商品
+      final ProductDetailsResponse response =
+          await _inAppPurchase.queryProductDetails(productIds);
+
+      if (response.notFoundIDs.isNotEmpty) {
+        Logger.w('Products not found: ${response.notFoundIDs}');
+      }
+
+      products.assignAll(response.productDetails);
+      Logger.d('Loaded ${products.length} products');
+    } catch (e) {
+      Logger.e('Error loading products: $e');
+    }
   }
 
   /// 处理Apple支付
@@ -61,6 +121,8 @@ class ApplePaymentService extends GetxService {
     Function(bool success, String? errorMessage)? callback,
   }) async {
     try {
+      Logger.d('Processing Apple payment for order: ${order.id}');
+
       if (!isAvailable.value) {
         Logger.e('In-App Purchase is not available');
         callback?.call(false, 'In-App Purchase is not available');
@@ -71,44 +133,35 @@ class ApplePaymentService extends GetxService {
       _currentOrder = order;
       _paymentCallback = callback;
 
-      // 查询商品详情
-      final ProductDetailsResponse productDetailsResponse =
-          await _inAppPurchase.queryProductDetails({order.productId});
-
-      if (productDetailsResponse.error != null) {
-        Logger.e(
-            'Error querying product details: ${productDetailsResponse.error}');
-        callback?.call(false, 'Error querying product details: ${productDetailsResponse.error}');
-        return false;
+      // 在开发模式下，模拟支付成功
+      if (kDebugMode) {
+        Logger.d('Simulating Apple payment success in debug mode');
+        await Future.delayed(const Duration(seconds: 2));
+        callback?.call(true, null);
+        return true;
       }
 
-      if (productDetailsResponse.productDetails.isEmpty) {
-        Logger.e('No product details found for ${order.productId}');
-        callback?.call(false, 'No product details found for ${order.productId}');
+      // 查找对应的商品
+      final productId = order.productId;
+      final product = products.firstWhereOrNull((p) => p.id == productId);
+
+      if (product == null) {
+        Logger.e('Product not found: $productId');
+        callback?.call(false, 'Product not found: $productId');
         return false;
       }
 
       // 购买商品
       final PurchaseParam purchaseParam = PurchaseParam(
-        productDetails: productDetailsResponse.productDetails.first,
-        applicationUserName: order.userId,
+        productDetails: product,
+        applicationUserName: null,
       );
 
-      // 根据商品类型选择购买方式
-      final ProductModel? product = _getProductFromOrder(order);
-      if (product == null) {
-        Logger.e('Product not found for order: ${order.id}');
-        callback?.call(false, 'Product not found for order');
-        return false;
-      }
+      // 发起购买
+      await _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
 
-      if (product.type == ProductType.points) {
-        // 积分包是消耗性商品
-        return await _inAppPurchase.buyConsumable(purchaseParam: purchaseParam);
-      } else {
-        // 会员是非消耗性商品
-        return await _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
-      }
+      // 购买结果将通过purchaseStream回调
+      return true;
     } catch (e) {
       Logger.e('Error processing Apple payment: $e');
       callback?.call(false, 'Error processing Apple payment: $e');
@@ -119,11 +172,21 @@ class ApplePaymentService extends GetxService {
   /// 恢复购买
   Future<bool> restorePurchases() async {
     try {
+      Logger.d('Restoring purchases');
+
       if (!isAvailable.value) {
         Logger.e('In-App Purchase is not available');
         return false;
       }
 
+      // 在开发模式下，模拟恢复购买成功
+      if (kDebugMode) {
+        Logger.d('Simulating restore purchases success in debug mode');
+        await Future.delayed(const Duration(seconds: 1));
+        return true;
+      }
+
+      // 恢复购买
       await _inAppPurchase.restorePurchases();
       return true;
     } catch (e) {
@@ -141,7 +204,8 @@ class ApplePaymentService extends GetxService {
       } else if (purchaseDetails.status == PurchaseStatus.error) {
         // 购买错误
         Logger.e('Purchase error: ${purchaseDetails.error}');
-        _paymentCallback?.call(false, 'Purchase error: ${purchaseDetails.error?.message}');
+        _paymentCallback?.call(
+            false, 'Purchase error: ${purchaseDetails.error?.message}');
       } else if (purchaseDetails.status == PurchaseStatus.purchased ||
           purchaseDetails.status == PurchaseStatus.restored) {
         // 购买成功或恢复购买
@@ -183,20 +247,13 @@ class ApplePaymentService extends GetxService {
         _paymentCallback?.call(true, null);
       } else {
         Logger.e('Purchase verification failed: ${response.statusText}');
-        _paymentCallback?.call(false, 'Purchase verification failed: ${response.statusText}');
+        _paymentCallback?.call(
+            false, 'Purchase verification failed: ${response.statusText}');
       }
     } catch (e) {
       Logger.e('Error verifying purchase: $e');
       _paymentCallback?.call(false, 'Error verifying purchase: $e');
     }
-  }
-
-  /// 从订单中获取商品信息
-  ProductModel? _getProductFromOrder(OrderModel order) {
-    // 这里应该从商品列表中查找对应的商品
-    // 由于我们没有商品列表的引用，这里简单返回null
-    // 实际应用中应该从商品仓库或服务中获取
-    return null;
   }
 
   @override

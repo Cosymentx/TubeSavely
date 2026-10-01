@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import '../../../routes/app_pages.dart';
 import '../../../services/user_service.dart';
 import '../../../utils/logger.dart';
 import '../../../utils/utils.dart';
@@ -120,15 +121,16 @@ class LoginController extends GetxController {
       final email = emailController.text.trim();
       final password = passwordController.text;
 
-      final success = await _userService.login(email, password);
+      final result = await _userService.login(email, password);
 
-      if (success) {
+      if (result['success'] == true) {
         Utils.showSnackbar('成功', '登录成功');
 
-        // 跳转到首页
-        Get.offAllNamed('/home');
+        // 跳转到主页面（带底部导航栏）
+        Get.offAllNamed(Routes.MAIN);
       } else {
-        Utils.showSnackbar('错误', '登录失败，请检查邮箱和密码', isError: true);
+        Utils.showSnackbar('错误', result['message'] ?? '登录失败，请检查邮箱和密码',
+            isError: true);
       }
     } catch (e) {
       Logger.e('Login error: $e');
@@ -152,15 +154,16 @@ class LoginController extends GetxController {
       final password = passwordController.text;
       final name = nameController.text.trim();
 
-      final success = await _userService.register(email, password, name);
+      final result = await _userService.register(email, password, name);
 
-      if (success) {
+      if (result['success'] == true) {
         Utils.showSnackbar('成功', '注册成功');
 
-        // 跳转到首页
-        Get.offAllNamed('/home');
+        // 跳转到主页面（带底部导航栏）
+        Get.offAllNamed(Routes.MAIN);
       } else {
-        Utils.showSnackbar('错误', '注册失败，请稍后重试', isError: true);
+        Utils.showSnackbar('错误', result['message'] ?? '注册失败，请稍后重试',
+            isError: true);
       }
     } catch (e) {
       Logger.e('Register error: $e');
@@ -175,31 +178,48 @@ class LoginController extends GetxController {
     // 显示忘记密码对话框
     Get.dialog(
       AlertDialog(
-        title: const Text('忘记密码'),
+        title: Text('忘记密码', style: TextStyle(fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('请输入您的注册邮箱，我们将向您发送重置密码的链接'),
-            const SizedBox(height: 16),
+            Text('请输入您的注册邮箱，我们将向您发送重置密码的链接'),
+            SizedBox(height: 16),
             TextField(
               controller: emailController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: '邮箱',
                 hintText: '请输入您的邮箱',
-                border: OutlineInputBorder(),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                filled: true,
+                fillColor: Get.theme.colorScheme.surface,
               ),
               keyboardType: TextInputType.emailAddress,
             ),
           ],
         ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
         actions: [
           TextButton(
             onPressed: () => Get.back(),
-            child: const Text('取消'),
+            style: TextButton.styleFrom(
+              foregroundColor: Get.theme.colorScheme.onSurface,
+            ),
+            child: Text('取消'),
           ),
           ElevatedButton(
             onPressed: () => _sendResetPasswordEmail(),
-            child: const Text('发送'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Get.theme.colorScheme.primary,
+              foregroundColor: Get.theme.colorScheme.onPrimary,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: Text('发送'),
           ),
         ],
       ),
@@ -227,13 +247,14 @@ class LoginController extends GetxController {
       isLoading.value = true;
 
       // 调用API发送重置密码邮件
-      final success =
+      final result =
           await _userService.sendResetPasswordEmail(emailController.text);
 
-      if (success) {
+      if (result['success'] == true) {
         Utils.showSnackbar('成功', '重置密码邮件已发送，请查收');
       } else {
-        Utils.showSnackbar('错误', '发送重置密码邮件失败，请稍后重试', isError: true);
+        Utils.showSnackbar('错误', result['message'] ?? '发送重置密码邮件失败，请稍后重试',
+            isError: true);
       }
     } catch (e) {
       Logger.e('Send reset password email error: $e');
@@ -279,19 +300,20 @@ class LoginController extends GetxController {
       }
 
       // 调用服务进行登录
-      final success = await _userService.loginWithGoogle(
+      final result = await _userService.loginWithGoogle(
         idToken: idToken,
         email: googleUser.email,
         name: googleUser.displayName,
       );
 
-      if (success) {
+      if (result['success'] == true) {
         Utils.showSnackbar('成功', 'Google 登录成功');
 
-        // 跳转到首页
-        Get.offAllNamed('/home');
+        // 跳转到主页面（带底部导航栏）
+        Get.offAllNamed(Routes.MAIN);
       } else {
-        Utils.showSnackbar('错误', 'Google 登录失败，请稍后重试', isError: true);
+        Utils.showSnackbar('错误', result['message'] ?? 'Google 登录失败，请稍后重试',
+            isError: true);
       }
     } catch (e) {
       Logger.e('Google login error: $e');
@@ -349,19 +371,20 @@ class LoginController extends GetxController {
       }
 
       // 调用服务进行登录
-      final success = await _userService.loginWithApple(
+      final result = await _userService.loginWithApple(
         identityToken: identityToken,
         email: email,
         name: name,
       );
 
-      if (success) {
+      if (result['success'] == true) {
         Utils.showSnackbar('成功', 'Apple 登录成功');
 
-        // 跳转到首页
-        Get.offAllNamed('/home');
+        // 跳转到主页面（带底部导航栏）
+        Get.offAllNamed(Routes.MAIN);
       } else {
-        Utils.showSnackbar('错误', 'Apple 登录失败，请稍后重试', isError: true);
+        Utils.showSnackbar('错误', result['message'] ?? 'Apple 登录失败，请稍后重试',
+            isError: true);
       }
     } catch (e) {
       Logger.e('Apple login error: $e');

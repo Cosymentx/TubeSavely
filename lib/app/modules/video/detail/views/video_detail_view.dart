@@ -118,52 +118,43 @@ class VideoDetailView extends GetView<VideoDetailController> {
     return Obx(() {
       if (controller.isPlaying.value) {
         // 显示视频播放器
-        return Stack(
-          alignment: Alignment.center,
-          children: [
-            // 视频播放器
-            Container(
-              width: double.infinity,
-              height: 220.h,
-              color: Colors.black,
-              child: AspectRatio(
+        return Container(
+          width: double.infinity,
+          height: 220.h,
+          color: Colors.black,
+          child: Stack(
+            children: [
+              // 视频播放器
+              AspectRatio(
                 aspectRatio: 16 / 9,
                 child: Video(controller: controller.videoController),
               ),
-            ),
 
-            // 点击区域，用于显示/隐藏控制器
-            Positioned.fill(
-              child: GestureDetector(
-                onTap: controller.toggleControls,
-                behavior: HitTestBehavior.translucent,
-                child: Container(color: Colors.transparent),
+              // 点击区域，用于显示/隐藏控制器和双击暂停/播放
+              Positioned.fill(
+                child: GestureDetector(
+                  onTap: controller.toggleControls,
+                  onDoubleTap: controller.togglePlayPause,
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    color: Colors.transparent,
+                  ),
+                ),
               ),
-            ),
 
-            // 控制器
-            Obx(() {
-              if (controller.showControls.value) {
-                return _buildVideoControls();
-              } else {
-                return const SizedBox.shrink();
-              }
-            }),
+              // 控制器
+              if (controller.showControls.value) _buildVideoControls(),
 
-            // 加载指示器
-            Obx(() {
-              if (controller.playerStatus.value == PlayerStatus.loading) {
-                return const Center(
+              // 加载指示器
+              if (controller.playerStatus.value == PlayerStatus.loading)
+                const Center(
                   child: CircularProgressIndicator(
                     valueColor:
                         AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
                   ),
-                );
-              } else {
-                return const SizedBox.shrink();
-              }
-            }),
-          ],
+                ),
+            ],
+          ),
         );
       } else {
         // 显示缩略图和播放按钮
@@ -224,188 +215,65 @@ class VideoDetailView extends GetView<VideoDetailController> {
 
   // 视频控制器
   Widget _buildVideoControls() {
-    return Stack(
-      children: [
-        // 顶部控制栏（标题和返回按钮）
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.black.withAlpha(179),
-                  Colors.transparent,
-                ],
-              ),
-            ),
-            child: Row(
-              children: [
-                IconButton(
-                  icon: Icon(
-                    Icons.arrow_back,
-                    color: Colors.white,
-                    size: 20.sp,
-                  ),
-                  onPressed: () {
-                    controller.togglePlayPause();
-                    controller.showControls.value = true;
-                  },
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-                SizedBox(width: 8.w),
-                Expanded(
-                  child: Text(
-                    controller.video.value?.title ?? '',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-
-        // 中间控制按钮
-        Center(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // 快退按钮
-              IconButton(
-                icon: Icon(Icons.replay_10, color: Colors.white, size: 36.sp),
-                onPressed: controller.rewind10Seconds,
-              ),
-
-              SizedBox(width: 16.w),
-
-              // 播放/暂停按钮
-              Container(
-                width: 60.w,
-                height: 60.w,
-                decoration: BoxDecoration(
-                  color: Colors.black.withAlpha(128), // 0.5 透明度
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  icon: Icon(
-                    controller.playerStatus.value == PlayerStatus.playing
-                        ? Icons.pause
-                        : Icons.play_arrow,
-                    color: Colors.white,
-                    size: 40.sp,
-                  ),
-                  onPressed: controller.togglePlayPause,
-                ),
-              ),
-
-              SizedBox(width: 16.w),
-
-              // 快进按钮
-              IconButton(
-                icon: Icon(Icons.forward_10, color: Colors.white, size: 36.sp),
-                onPressed: controller.forward10Seconds,
-              ),
+    return Positioned(
+      bottom: 0,
+      left: 0,
+      right: 0,
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.bottomCenter,
+            end: Alignment.topCenter,
+            colors: [
+              Colors.black.withAlpha(204),
+              Colors.transparent,
             ],
           ),
         ),
-
-        // 底部控制栏（进度条、时间、全屏按钮）
-        Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.bottomCenter,
-                end: Alignment.topCenter,
-                colors: [
-                  Colors.black.withAlpha(179),
-                  Colors.transparent,
-                ],
+        child: Row(
+          children: [
+            // 当前时间
+            Text(
+              controller.getFormattedPosition(),
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 12.sp,
               ),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // 进度条
-                _buildProgressBar(),
 
-                SizedBox(height: 8.h),
+            SizedBox(width: 8.w),
 
-                // 时间和控制按钮
-                Row(
-                  children: [
-                    // 当前时间
-                    Text(
-                      controller.getFormattedPosition(),
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12.sp,
-                      ),
-                    ),
-
-                    SizedBox(width: 8.w),
-
-                    // 总时长
-                    Text(
-                      '/ ${controller.getFormattedDuration()}',
-                      style: TextStyle(
-                        color: Colors.white.withAlpha(179),
-                        fontSize: 12.sp,
-                      ),
-                    ),
-
-                    const Spacer(),
-
-                    // 静音按钮
-                    IconButton(
-                      icon: Icon(
-                        controller.isMuted.value
-                            ? Icons.volume_off
-                            : Icons.volume_up,
-                        color: Colors.white,
-                        size: 20.sp,
-                      ),
-                      onPressed: controller.toggleMute,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-
-                    SizedBox(width: 16.w),
-
-                    // 全屏按钮
-                    IconButton(
-                      icon: Icon(
-                        controller.isFullscreen.value
-                            ? Icons.fullscreen_exit
-                            : Icons.fullscreen,
-                        color: Colors.white,
-                        size: 20.sp,
-                      ),
-                      onPressed: controller.toggleFullscreen,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                  ],
-                ),
-              ],
+            // 进度条
+            Expanded(
+              child: _buildProgressBar(),
             ),
-          ),
+
+            SizedBox(width: 8.w),
+
+            // 静音按钮
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: controller.toggleMute,
+                borderRadius: BorderRadius.circular(15.r),
+                child: Container(
+                  width: 30.w,
+                  height: 30.h,
+                  alignment: Alignment.center,
+                  child: Icon(
+                    controller.isMuted.value
+                        ? Icons.volume_off
+                        : Icons.volume_up,
+                    color: Colors.white,
+                    size: 20.sp,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
@@ -424,9 +292,9 @@ class VideoDetailView extends GetView<VideoDetailController> {
 
       return SliderTheme(
         data: SliderThemeData(
-          trackHeight: 4.h,
-          thumbShape: RoundSliderThumbShape(enabledThumbRadius: 6.r),
-          overlayShape: RoundSliderOverlayShape(overlayRadius: 12.r),
+          trackHeight: 3.h,
+          thumbShape: RoundSliderThumbShape(enabledThumbRadius: 5.r),
+          overlayShape: RoundSliderOverlayShape(overlayRadius: 10.r),
           activeTrackColor: AppTheme.primaryColor,
           inactiveTrackColor: Colors.white.withAlpha(77), // 0.3 透明度
           thumbColor: AppTheme.primaryColor,
@@ -684,45 +552,6 @@ class VideoDetailView extends GetView<VideoDetailController> {
       padding: EdgeInsets.symmetric(horizontal: 16.w),
       child: Column(
         children: [
-          // 播放/暂停按钮
-          SizedBox(
-            width: double.infinity,
-            child: Obx(() {
-              final bool isPlaying = controller.isPlaying.value;
-              return ElevatedButton(
-                onPressed: isPlaying
-                    ? controller.togglePlayPause
-                    : controller.playVideo,
-                style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(vertical: 12.h),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  backgroundColor:
-                      isPlaying ? Colors.orange : AppTheme.accentColor,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      isPlaying ? Icons.pause : Icons.play_arrow,
-                      size: 20.sp,
-                      color: Colors.white,
-                    ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      isPlaying ? '暂停播放' : '播放视频',
-                      style: TextStyle(
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }),
-          ),
           SizedBox(height: 12.h),
           // 下载按钮
           SizedBox(
@@ -809,73 +638,6 @@ class VideoDetailView extends GetView<VideoDetailController> {
             ),
           ),
           SizedBox(height: 12.h),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: controller.shareVideo,
-                  style: OutlinedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: 12.h),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12.r),
-                    ),
-                    side: BorderSide(color: AppTheme.primaryColor),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.share,
-                        size: 18.sp,
-                        color: AppTheme.primaryColor,
-                      ),
-                      SizedBox(width: 8.w),
-                      Text(
-                        '分享',
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w500,
-                          color: AppTheme.primaryColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              SizedBox(width: 12.w),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: controller.favoriteVideo,
-                  style: OutlinedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: 12.h),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12.r),
-                    ),
-                    side: BorderSide(color: AppTheme.primaryColor),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.favorite_border,
-                        size: 18.sp,
-                        color: AppTheme.primaryColor,
-                      ),
-                      SizedBox(width: 8.w),
-                      Text(
-                        '收藏',
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w500,
-                          color: AppTheme.primaryColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
         ],
       ),
     );

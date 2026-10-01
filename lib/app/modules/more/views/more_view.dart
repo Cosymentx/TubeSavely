@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import 'package:tubesavely/app/routes/app_pages.dart';
 import 'package:tubesavely/app/utils/utils.dart';
 
 import '../../../theme/app_colors.dart';
@@ -190,6 +191,12 @@ class MoreView extends GetView<MoreController> {
       ),
       child: Column(
         children: [
+          _buildListTile(
+            icon: Icons.feedback_outlined,
+            title: '意见反馈',
+            onTap: () => Get.toNamed(Routes.FEEDBACK),
+          ),
+          _buildDivider(),
           _buildListTile(
             icon: Icons.email_outlined,
             title: '发送邮件',

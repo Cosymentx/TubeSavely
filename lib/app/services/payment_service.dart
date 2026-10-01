@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:tubesavely/app/data/models/payment_model.dart';
 import 'package:tubesavely/app/data/models/user_model.dart';
@@ -34,13 +36,23 @@ class PaymentService extends GetxService {
   Future<PaymentService> init() async {
     Logger.d('PaymentService initialized');
 
-    // 获取Stripe服务
-    _stripeService = Get.find<StripeService>();
-    isStripeAvailable.value = _stripeService.isInitialized;
+    try {
+      // 获取Stripe服务
+      _stripeService = Get.find<StripeService>();
+      isStripeAvailable.value = _stripeService.isInitialized;
+    } catch (e) {
+      Logger.e('Error initializing Stripe service: $e');
+      isStripeAvailable.value = false;
+    }
 
-    // 获取Apple支付服务
-    _applePaymentService = Get.find<ApplePaymentService>();
-    isApplePayAvailable.value = _applePaymentService.isAvailable.value;
+    try {
+      // 获取Apple支付服务
+      _applePaymentService = Get.find<ApplePaymentService>();
+      isApplePayAvailable.value = _applePaymentService.isAvailable.value;
+    } catch (e) {
+      Logger.e('Error initializing Apple payment service: $e');
+      isApplePayAvailable.value = false;
+    }
 
     // 加载商品列表
     await loadProducts();
@@ -55,7 +67,7 @@ class PaymentService extends GetxService {
 
       try {
         // 尝试从API获取商品列表
-        final response = await _apiProvider.getPointsPackages();
+        final response = await _apiProvider.getCreditsPackages();
 
         if (response.status.isOk && response.body != null) {
           final List<dynamic> data = response.body;
@@ -147,63 +159,64 @@ class PaymentService extends GetxService {
     ];
 
     // 积分套餐
-    final pointsProducts = [
+    final creditsProducts = [
       ProductModel(
-        id: 'points_100',
+        id: 'credits_100',
         title: '100积分',
         description: '可用于下载视频和音频',
         price: 10.0,
         currency: 'CNY',
-        type: ProductType.points,
+        type: ProductType.credit,
         metadata: {
-          'points': 100,
+          'credits': 100,
         },
       ),
       ProductModel(
-        id: 'points_300',
+        id: 'credits_300',
         title: '300积分',
         description: '可用于下载视频和音频，赠送30积分',
         price: 30.0,
         currency: 'CNY',
-        type: ProductType.points,
+        type: ProductType.credit,
         metadata: {
-          'points': 330,
+          'credits': 330,
         },
       ),
       ProductModel(
-        id: 'points_500',
+        id: 'credits_500',
         title: '500积分',
         description: '可用于下载视频和音频，赠送100积分',
         price: 50.0,
         currency: 'CNY',
-        type: ProductType.points,
+        type: ProductType.credit,
         metadata: {
-          'points': 600,
+          'credits': 600,
         },
       ),
       ProductModel(
-        id: 'points_1000',
+        id: 'credits_1000',
         title: '1000积分',
         description: '可用于下载视频和音频，赠送300积分',
         price: 100.0,
         currency: 'CNY',
-        type: ProductType.points,
+        type: ProductType.credit,
         metadata: {
-          'points': 1300,
+          'credits': 1300,
         },
       ),
     ];
 
     // 合并商品列表
-    products.value = [...membershipProducts, ...pointsProducts];
+    products.value = [...membershipProducts, ...creditsProducts];
   }
 
   /// 创建订单
   ///
   /// [productId] 商品ID
   /// [paymentMethod] 支付方式
-  Future<OrderModel?> createOrder(
-      String productId, PaymentMethod paymentMethod) async {
+  /// [currency] 货币类型，默认为CNY
+  Future<OrderModel?> createOrder(String productId, PaymentMethod paymentMethod,
+      {String currency = 'CNY'}) async {
     try {
       isLoading.value = true;
 
@@ -211,12 +224,31 @@ class PaymentService extends GetxService {
       final response = await _apiProvider.createOrder(
         productId,
         paymentMethod.toString().split('.').last,
+        currency: currency,
       );
 
       if (response.status.isOk && response.body != null) {
-        final order = OrderModel.fromJson(response.body);
-        currentOrder.value = order;
-        return order;
+        // 从响应中获取data字段
+        final data = response.body['data'];
+        if (data != null) {
+          // 构建订单模型
+          final order = OrderModel(
+            id: data['order_id'] ?? '',
+            productId: productId,
+            amount: double.tryParse(data['amount'] ?? '0.0') ?? 0.0,
+            currency: currency,
+            status: 'pending',
+            paymentMethod: paymentMethod,
+            paymentUrl: data['payment_url'] ?? '',
+            createdAt: DateTime.now(),
+          );
+
+          currentOrder.value = order;
+          return order;
+        } else {
+          Logger.e('Failed to create order: No data in response');
+          return null;
+        }
       } else {
         Logger.e('Failed to create order: ${response.statusText}');
         return null;

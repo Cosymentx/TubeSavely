@@ -1,12 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:ffmpeg_kit_flutter_full_gpl/ffmpeg_kit.dart';
-import 'package:ffmpeg_kit_flutter_full_gpl/ffmpeg_kit_config.dart';
-import 'package:ffmpeg_kit_flutter_full_gpl/ffprobe_kit.dart';
-import 'package:ffmpeg_kit_flutter_full_gpl/media_information.dart';
-import 'package:ffmpeg_kit_flutter_full_gpl/media_information_session.dart';
-import 'package:ffmpeg_kit_flutter_full_gpl/return_code.dart';
+// 临时使用存根实现，避免编译错误
+import 'ffmpeg_stub.dart';
 import 'package:flutter/widgets.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
@@ -21,22 +17,30 @@ class FFmpegExecutor {
   const FFmpegExecutor._();
 
   static Future<String?> merge(String? videoPath, String? audioPath,
-      {String? outputPath, ProgressCallback? progressCallback, FailureCallback? onFailure}) async {
+      {String? outputPath,
+      ProgressCallback? progressCallback,
+      FailureCallback? onFailure}) async {
     if (videoPath == null || audioPath == null) {
       debugPrint('merge media failure: videoPath or audioPath is null');
       return null;
     }
     final command =
         '-hide_banner -i "$videoPath" -i "$audioPath" -c:v copy -c:a aac -pix_fmt yuv420p -y "${outputPath ?? defaultOutputPath}"';
-    if (await _execute(command, progressType: ProgressType.merge, onProgress: progressCallback, onFailure: onFailure)) {
+    if (await _execute(command,
+        progressType: ProgressType.merge,
+        onProgress: progressCallback,
+        onFailure: onFailure)) {
       return outputPath;
     }
     return null;
   }
 
   static Future<String?> convert(String videoPath,
-      {String? outputPath, ProgressCallback? onProgress, FailureCallback? onFailure}) async {
-    outputPath ??= '${Storage().getString(StorageKeys.CACHE_DIR_KEY)}/${path.basename(videoPath)}.mp4';
+      {String? outputPath,
+      ProgressCallback? onProgress,
+      FailureCallback? onFailure}) async {
+    outputPath ??=
+        '${Storage().getString(StorageKeys.CACHE_DIR_KEY)}/${path.basename(videoPath)}.mp4';
     File outputFile = File(outputPath);
     if (outputFile.existsSync()) {
       onProgress?.call(ProgressType.convert, 100);
@@ -45,15 +49,21 @@ class FFmpegExecutor {
 
     // final command =
     //     '-hide_banner -i "$videoPath" -c:v libx264 -preset slow -progress "$progressLogPath" -crf 23 -c:a copy -y "$outputPath"';
-    final command = '-hide_banner -i "$videoPath" -c:v libx264 -preset veryfast -crf 23 -c:a copy -y "$outputPath"';
-    if (await _execute(command, progressType: ProgressType.convert, onProgress: onProgress, onFailure: onFailure)) {
+    final command =
+        '-hide_banner -i "$videoPath" -c:v libx264 -preset veryfast -crf 23 -c:a copy -y "$outputPath"';
+    if (await _execute(command,
+        progressType: ProgressType.convert,
+        onProgress: onProgress,
+        onFailure: onFailure)) {
       return outputPath;
     }
     return null;
   }
 
-  static Future<String?> extractThumbnail(String videoPath, {String? outputPath, ProgressCallback? onProgress}) async {
-    outputPath ??= '${await getApplicationDocumentsDirectory().then((value) => value.path)}/${path.basename(videoPath)}.jpg';
+  static Future<String?> extractThumbnail(String videoPath,
+      {String? outputPath, ProgressCallback? onProgress}) async {
+    outputPath ??=
+        '${await getApplicationDocumentsDirectory().then((value) => value.path)}/${path.basename(videoPath)}.jpg';
     File thumbnailFile = File(outputPath);
     if (thumbnailFile.existsSync()) {
       return outputPath;
@@ -68,44 +78,67 @@ class FFmpegExecutor {
   }
 
   static Future<String?> extractAudio(String videoPath,
-      {String? outputPath, ProgressCallback? onProgress, FailureCallback? onFailure}) async {
-    final command = '-hide_banner -i "$videoPath" -y -vn -acodec copy "${path.basename(videoPath)}.mp3"';
+      {String? outputPath,
+      ProgressCallback? onProgress,
+      FailureCallback? onFailure}) async {
+    final command =
+        '-hide_banner -i "$videoPath" -y -vn -acodec copy "${path.basename(videoPath)}.mp3"';
     if (await _execute(command, onProgress: onProgress, onFailure: onFailure)) {
       return outputPath;
     }
     return null;
   }
 
-  static Future<Map<String, dynamic>?> extractMediaInformation(String videoPath) async {
-    MediaInformationSession session = await FFprobeKit.getMediaInformation(videoPath);
+  static Future<Map<String, dynamic>?> extractMediaInformation(
+      String videoPath) async {
+    MediaInformationSession session =
+        await FFprobeKit.getMediaInformation(videoPath);
     MediaInformation? mediaInformation = session.getMediaInformation();
-    return {'size': num.parse(mediaInformation?.getSize() ?? '0'), 'duration': num.parse(mediaInformation?.getDuration() ?? '0')};
+    return {
+      'size': num.parse(mediaInformation?.getSize() ?? '0'),
+      'duration': num.parse(mediaInformation?.getDuration() ?? '0')
+    };
   }
 
   static Future<String?> recode(String videoPath,
-      {String? outputPath, ProgressCallback? onProgress, FailureCallback? onFailure}) async {
-    final command = '-hide_banner -i "$videoPath" -err_detect ignore_err -c:v mpeg4 -y "$outputPath"';
-    if (await _execute(command, progressType: ProgressType.recode, onProgress: onProgress, onFailure: onFailure)) {
+      {String? outputPath,
+      ProgressCallback? onProgress,
+      FailureCallback? onFailure}) async {
+    final command =
+        '-hide_banner -i "$videoPath" -err_detect ignore_err -c:v mpeg4 -y "$outputPath"';
+    if (await _execute(command,
+        progressType: ProgressType.recode,
+        onProgress: onProgress,
+        onFailure: onFailure)) {
       return outputPath;
     }
     return null;
   }
 
   static Future<String?> download(String videoUrl,
-      {String? outputPath, ProgressCallback? onProgress, FailureCallback? onFailure}) async {
-    final command = '-hide_banner -i "$videoUrl" -c copy -bsf:a aac_adtstoasc -y "$outputPath"';
-    if (await _execute(command, progressType: ProgressType.download, onProgress: onProgress, onFailure: onFailure)) {
+      {String? outputPath,
+      ProgressCallback? onProgress,
+      FailureCallback? onFailure}) async {
+    final command =
+        '-hide_banner -i "$videoUrl" -c copy -bsf:a aac_adtstoasc -y "$outputPath"';
+    if (await _execute(command,
+        progressType: ProgressType.download,
+        onProgress: onProgress,
+        onFailure: onFailure)) {
       return outputPath;
     }
     return null;
   }
 
   static Future<bool> _execute(String command,
-      {ProgressType? progressType, ProgressCallback? onProgress, FailureCallback? onFailure}) async {
+      {ProgressType? progressType,
+      ProgressCallback? onProgress,
+      FailureCallback? onFailure}) async {
     num fileSize = 0;
     num totalDuration = 0;
     List<String> commandList = FFmpegKitConfig.parseArguments(command);
-    Map<String, dynamic>? mediaInformation = await extractMediaInformation(commandList[2]);
+    Map<String, dynamic>? mediaInformation =
+        await extractMediaInformation(commandList[2]);
     fileSize = mediaInformation?['size'] ?? 0;
     totalDuration = mediaInformation?['duration'] ?? 0;
 
@@ -119,14 +152,16 @@ class FFmpegExecutor {
         onProgress?.call(progressType ?? ProgressType.idle, 100);
         completer.complete(true); // 成功时，完成Future并返回true
       } else {
-        onFailure?.call(Exception('ffmpeg execute result : Failure $code, $command'));
+        onFailure?.call(
+            Exception('ffmpeg execute result : Failure $code, $command'));
         debugPrint('ffmpeg execute result : Failure $code, $command');
         completer.complete(false); // 成功时，完成Future并返回true
       }
     }, (log) {
       debugPrint('execute log ${log.getMessage()}');
     }, (statistics) {
-      num currentDuration = num.parse((statistics.getTime() / 1000).toStringAsFixed(2));
+      num currentDuration =
+          num.parse((statistics.getTime() / 1000).toStringAsFixed(2));
       num currentSize = statistics.getSize();
       // debugPrint(
       //     'currentDuration $currentDuration, totalDuration $totalDuration, currentSize $currentSize, fileSize $fileSize');

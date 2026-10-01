@@ -15,6 +15,20 @@ class TransactionResult {
   });
 }
 
+/// 兼容旧版API的参数
+extension PaymentRepositoryExtension on PaymentRepository {
+  /// 获取交易记录（兼容旧版API）
+  Future<TransactionResult> getTransactionsCompat({
+    required int page,
+    required int pageSize,
+  }) async {
+    return getTransactions(
+      offset: (page - 1) * pageSize,
+      limit: pageSize,
+    );
+  }
+}
+
 /// 支付仓库
 ///
 /// 负责处理支付相关的数据操作
@@ -43,10 +57,12 @@ class PaymentRepository {
   ///
   /// [productId] 商品ID
   /// [paymentMethod] 支付方式
-  Future<OrderModel?> createOrder(
-      String productId, PaymentMethod paymentMethod) async {
+  /// [currency] 货币类型，默认为CNY
+  Future<OrderModel?> createOrder(String productId, PaymentMethod paymentMethod,
+      {String currency = 'CNY'}) async {
     try {
-      return await _paymentService.createOrder(productId, paymentMethod);
+      return await _paymentService.createOrder(productId, paymentMethod,
+          currency: currency);
     } catch (e) {
       Logger.e('Error creating order: $e');
       return null;
@@ -98,29 +114,35 @@ class PaymentRepository {
 
   /// 获取交易记录
   ///
-  /// [page] 页码
-  /// [pageSize] 每页数量
+  /// [offset] 偏移量
+  /// [limit] 限制数量
   Future<TransactionResult> getTransactions({
-    required int page,
-    required int pageSize,
+    int offset = 0,
+    int limit = 10,
   }) async {
     try {
-      final response = await _apiProvider.get('/orders', query: {
-        'page': page.toString(),
-        'page_size': pageSize.toString(),
-      });
+      final response = await _apiProvider.getTransactions(
+        offset: offset,
+        limit: limit,
+      );
 
       if (response.status.isOk && response.body != null) {
-        final List<dynamic> data = response.body['data'];
-        final bool hasMore = response.body['has_more'] ?? false;
+        final data = response.body['data'];
+        if (data != null && data is List) {
+          final List<OrderModel> transactions = data
+              .map((item) => OrderModel.fromJson(item))
+              .toList()
+              .cast<OrderModel>();
 
-        final transactions =
-            data.map((item) => OrderModel.fromJson(item)).toList();
+          // 获取总数
+          final total = response.body['total'] ?? transactions.length;
+          final hasMore = offset + transactions.length < total;
 
-        return TransactionResult(
-          transactions: transactions,
-          hasMore: hasMore,
-        );
+          return TransactionResult(
+            transactions: transactions,
+            hasMore: hasMore,
+          );
+        }
       }
 
       return TransactionResult(
@@ -133,6 +155,46 @@ class PaymentRepository {
         transactions: [],
         hasMore: false,
       );
+    }
+  }
+
+  /// 获取支付宝支付参数
+  ///
+  /// [orderId] 订单ID
+  Future<Map<String, dynamic>?> getAlipayParams(String orderId) async {
+    try {
+      Logger.d('Getting Alipay params: $orderId');
+
+      final response = await _apiProvider.getAlipayParams(orderId);
+
+      if (response.status.isOk) {
+        return response.body['data'];
+      }
+
+      return null;
+    } catch (e) {
+      Logger.e('Error getting Alipay params: $e');
+      return null;
+    }
+  }
+
+  /// 获取微信支付参数
+  ///
+  /// [orderId] 订单ID
+  Future<Map<String, dynamic>?> getWechatPayParams(String orderId) async {
+    try {
+      Logger.d('Getting WeChat Pay params: $orderId');
+
+      final response = await _apiProvider.getWechatPayParams(orderId);
+
+      if (response.status.isOk) {
+        return response.body['data'];
+      }
+
+      return null;
+    } catch (e) {
+      Logger.e('Error getting WeChat Pay params: $e');
+      return null;
     }
   }
 

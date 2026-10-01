@@ -1,12 +1,18 @@
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:get/get.dart';
 import 'package:tubesavely/app/data/models/payment_model.dart';
 import 'package:tubesavely/app/data/providers/api_provider.dart';
 import 'package:tubesavely/app/utils/constants.dart';
 import 'package:tubesavely/app/utils/logger.dart';
 import 'package:tubesavely/app/utils/utils.dart';
+
+// 条件导入flutter_stripe
+// 只在移动平台和Web平台上导入
+import 'stripe_platform.dart'
+    if (dart.library.io) 'stripe_mobile.dart'
+    if (dart.library.html) 'stripe_web.dart';
 
 /// Stripe 支付服务
 ///
@@ -25,12 +31,20 @@ class StripeService extends GetxService {
     Logger.d('StripeService initialized');
 
     try {
-      // 初始化 Stripe
-      Stripe.publishableKey = _publishableKey;
-      await Stripe.instance.applySettings();
-      _isInitialized = true;
+      // 检查是否在支持的平台上
+      if (Platform.isAndroid || Platform.isIOS) {
+        // 初始化 Stripe
+        Stripe.publishableKey = _publishableKey;
+        await Stripe.instance.applySettings();
+        _isInitialized = true;
+      } else {
+        // 在不支持的平台上，只记录日志
+        Logger.d('Stripe is not supported on this platform');
+        _isInitialized = false;
+      }
     } catch (e) {
       Logger.e('Error initializing Stripe: $e');
+      _isInitialized = false;
     }
 
     return this;
@@ -74,7 +88,7 @@ class StripeService extends GetxService {
 
         // 生成一个模拟的客户端密钥
         final String clientSecret =
-            '$intentId\_secret_${DateTime.now().millisecondsSinceEpoch}';
+            '${intentId}_secret_${DateTime.now().millisecondsSinceEpoch}';
 
         // 返回模拟数据
         return {
@@ -125,41 +139,32 @@ class StripeService extends GetxService {
         productId: order.productId,
       );
 
-      // 在开发模式下，模拟支付成功
-      if (kDebugMode) {
-        // 显示一个模拟的支付表单
-        await Future.delayed(const Duration(seconds: 1));
-
-        // 模拟用户点击支付按钮
-        await Future.delayed(const Duration(seconds: 1));
-
-        // 模拟支付成功
-        Logger.d('模拟Stripe支付成功: ${paymentIntentResult['id']}');
-
-        // 返回支付成功
-        return true;
-      } else {
-        // 配置支付表单
-        await Stripe.instance.initPaymentSheet(
-          paymentSheetParameters: SetupPaymentSheetParameters(
-            merchantDisplayName: 'TubeSavely',
-            paymentIntentClientSecret: paymentIntentResult['client_secret'],
-            style: ThemeMode.system,
-            appearance: const PaymentSheetAppearance(
-              colors: PaymentSheetAppearanceColors(
-                primary: Color(0xFF8B5CF6), // 主色调
-              ),
-            ),
-            googlePay: const PaymentSheetGooglePay(
-              merchantCountryCode: 'US',
-              testEnv: true,
+      // 配置支付表单
+      await Stripe.instance.initPaymentSheet(
+        paymentSheetParameters: SetupPaymentSheetParameters(
+          merchantDisplayName: 'TubeSavely',
+          paymentIntentClientSecret: paymentIntentResult['client_secret'],
+          style: ThemeMode.system,
+          appearance: const PaymentSheetAppearance(
+            colors: PaymentSheetAppearanceColors(
+              primary: Color(0xFF8B5CF6), // 主色调
             ),
           ),
-        );
+          googlePay: const PaymentSheetGooglePay(
+            merchantCountryCode: 'US',
+            testEnv: true,
+          ),
+        ),
+      );
 
-        // 显示支付表单
-        await Stripe.instance.presentPaymentSheet();
+      // 显示支付表单
+      await Stripe.instance.presentPaymentSheet();
 
+      // 在开发模式下，模拟验证支付成功
+      if (kDebugMode) {
+        Logger.d('Stripe支付表单已显示，模拟验证支付成功: ${paymentIntentResult['id']}');
+        return true;
+      } else {
         // 验证支付
         final verificationData = {
           'payment_intent_id': paymentIntentResult['id'],
@@ -195,57 +200,48 @@ class StripeService extends GetxService {
         throw Exception('Stripe is not initialized');
       }
 
-      // 在开发模式下，模拟支付成功
-      if (kDebugMode) {
-        // 显示一个模拟的支付表单
-        await Future.delayed(const Duration(seconds: 1));
+      // 检查 Google Pay 是否可用
+      final isPlatformPaySupported =
+          await Stripe.instance.isPlatformPaySupported();
 
-        // 模拟用户点击支付按钮
-        await Future.delayed(const Duration(seconds: 1));
+      if (!isPlatformPaySupported) {
+        Utils.showSnackbar('错误', '您的设备不支持 Google Pay', isError: true);
+        return false;
+      }
 
-        // 模拟支付成功
-        Logger.d('模拟Google Pay支付成功: ${order.id}');
+      // 创建支付意图
+      final paymentIntentResult = await createPaymentIntent(
+        amount: (order.amount * 100).toInt(), // 转换为分
+        currency: order.currency.toLowerCase(),
+        productId: order.productId,
+      );
 
-        // 返回支付成功
-        return true;
-      } else {
-        // 检查 Google Pay 是否可用
-        final isPlatformPaySupported =
-            await Stripe.instance.isPlatformPaySupported();
-
-        if (!isPlatformPaySupported) {
-          Utils.showSnackbar('错误', '您的设备不支持 Google Pay', isError: true);
-          return false;
-        }
-
-        // 创建支付意图
-        final paymentIntentResult = await createPaymentIntent(
-          amount: (order.amount * 100).toInt(), // 转换为分
-          currency: order.currency.toLowerCase(),
-          productId: order.productId,
-        );
-
-        // 配置支付表单
-        await Stripe.instance.initPaymentSheet(
-          paymentSheetParameters: SetupPaymentSheetParameters(
-            merchantDisplayName: 'TubeSavely',
-            paymentIntentClientSecret: paymentIntentResult['client_secret'],
-            style: ThemeMode.system,
-            appearance: const PaymentSheetAppearance(
-              colors: PaymentSheetAppearanceColors(
-                primary: Color(0xFF8B5CF6), // 主色调
-              ),
-            ),
-            googlePay: const PaymentSheetGooglePay(
-              merchantCountryCode: 'US',
-              testEnv: true,
+      // 配置支付表单
+      await Stripe.instance.initPaymentSheet(
+        paymentSheetParameters: SetupPaymentSheetParameters(
+          merchantDisplayName: 'TubeSavely',
+          paymentIntentClientSecret: paymentIntentResult['client_secret'],
+          style: ThemeMode.system,
+          appearance: const PaymentSheetAppearance(
+            colors: PaymentSheetAppearanceColors(
+              primary: Color(0xFF8B5CF6), // 主色调
             ),
           ),
-        );
+          googlePay: const PaymentSheetGooglePay(
+            merchantCountryCode: 'US',
+            testEnv: true,
+          ),
+        ),
+      );
 
-        // 显示支付表单
-        await Stripe.instance.presentPaymentSheet();
+      // 显示支付表单
+      await Stripe.instance.presentPaymentSheet();
 
+      // 在开发模式下，模拟验证支付成功
+      if (kDebugMode) {
+        Logger.d('Google Pay支付表单已显示，模拟验证支付成功: ${order.id}');
+        return true;
+      } else {
         // 验证支付
         final verificationData = {
           'payment_intent_id': paymentIntentResult['id'],

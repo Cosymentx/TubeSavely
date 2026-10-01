@@ -1,12 +1,14 @@
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:media_kit/media_kit.dart';
-import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
+// import 'package:ffmpeg_kit_flutter/ffmpeg_kit.dart';  // 暂时注释掉
 import '../utils/logger.dart';
 import '../data/providers/api_provider.dart';
 import '../data/providers/storage_provider.dart';
+import '../data/repositories/credit_repository.dart';
 import '../data/repositories/download_repository.dart';
 import '../data/repositories/payment_repository.dart';
+import '../data/repositories/task_repository.dart';
 import '../data/repositories/user_repository.dart';
 import '../data/repositories/video_repository.dart';
 import '../data/repositories/video_converter_repository.dart';
@@ -74,16 +76,34 @@ Future<void> initServices() async {
   Get.put(userService, permanent: true);
 
   // 初始化并注册Stripe服务
-  final stripeService = await StripeService().init();
-  Get.put(stripeService, permanent: true);
+  try {
+    final stripeService = await StripeService().init();
+    Get.put(stripeService, permanent: true);
+  } catch (e) {
+    Logger.e('初始化Stripe服务失败: $e');
+    // 创建一个默认的服务实例，确保依赖注入不会失败
+    Get.put(StripeService(), permanent: true);
+  }
 
   // 初始化并注册Apple支付服务
-  final applePaymentService = await ApplePaymentService().init();
-  Get.put(applePaymentService, permanent: true);
+  try {
+    final applePaymentService = await ApplePaymentService().init();
+    Get.put(applePaymentService, permanent: true);
+  } catch (e) {
+    Logger.e('初始化Apple支付服务失败: $e');
+    // 创建一个默认的服务实例，确保依赖注入不会失败
+    Get.put(ApplePaymentService(), permanent: true);
+  }
 
   // 初始化并注册支付服务
-  final paymentService = await PaymentService().init();
-  Get.put(paymentService, permanent: true);
+  try {
+    final paymentService = await PaymentService().init();
+    Get.put(paymentService, permanent: true);
+  } catch (e) {
+    Logger.e('初始化支付服务失败: $e');
+    // 创建一个默认的服务实例，确保依赖注入不会失败
+    Get.put(PaymentService(), permanent: true);
+  }
 
   // 注册仓库
   Get.put(UserRepository(), permanent: true);
@@ -92,6 +112,8 @@ Future<void> initServices() async {
   Get.put(VideoConverterRepository(), permanent: true);
   Get.put(VideoPlayerRepository(), permanent: true);
   Get.put(PaymentRepository(), permanent: true);
+  Get.put(TaskRepository(), permanent: true);
+  Get.put(CreditRepository(), permanent: true);
 
   Logger.i('所有服务初始化完成');
 }

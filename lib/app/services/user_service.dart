@@ -1,8 +1,10 @@
 import 'package:get/get.dart';
 import '../data/models/user_model.dart';
+import '../data/models/api_response_model.dart';
 import '../data/providers/api_provider.dart';
 import '../data/providers/storage_provider.dart';
 import '../utils/logger.dart';
+import '../utils/utils.dart';
 
 /// 用户服务
 ///
@@ -37,31 +39,59 @@ class UserService extends GetxService {
   ///
   /// [email] 邮箱
   /// [password] 密码
-  /// 返回登录结果，成功返回true，失败返回false
-  Future<bool> login(String email, String password) async {
+  /// 返回登录结果，包含成功状态和消息
+  Future<Map<String, dynamic>> login(String email, String password) async {
     try {
       Logger.d('User login: $email');
 
       final response = await _apiProvider.login(email, password);
+      Logger.d("User login response: ${response.bodyString}");
 
-      if (response.status.isOk && response.body != null) {
+      // 处理API响应
+      final apiResponse =
+          _apiProvider.handleResponse<Map<String, dynamic>>(response);
+
+      if (apiResponse.isSuccess && apiResponse.data != null) {
         // 保存令牌
-        final token = response.body['token'];
+        final token = apiResponse.data!['access_token'];
         if (token != null) {
+          Logger.d('Saving token: $token');
           await _storageProvider.saveUserToken(token);
           isLoggedIn.value = true;
 
-          // 获取用户信息
-          await getUserInfo();
+          // 如果响应中包含用户信息，直接使用
+          if (apiResponse.data!.containsKey('user')) {
+            final userData = apiResponse.data!['user'];
+            if (userData != null) {
+              final user = UserModel.fromJson(userData);
+              await _storageProvider.saveUserInfo(user);
+              currentUser.value = user;
+            }
+          } else {
+            // 否则获取用户信息
+            await getUserInfo();
+          }
 
-          return true;
+          return {
+            'success': true,
+            'message': apiResponse.message,
+          };
         }
       }
 
-      return false;
+      // 返回错误信息
+      return {
+        'success': false,
+        'message': apiResponse.message,
+        'code': apiResponse.code,
+      };
     } catch (e) {
       Logger.e('Login error: $e');
-      return false;
+      return {
+        'success': false,
+        'message': '登录失败: $e',
+        'code': 500,
+      };
     }
   }
 
@@ -70,31 +100,60 @@ class UserService extends GetxService {
   /// [email] 邮箱
   /// [password] 密码
   /// [name] 用户名
-  /// 返回注册结果，成功返回true，失败返回false
-  Future<bool> register(String email, String password, String name) async {
+  /// 返回注册结果，包含成功状态和消息
+  Future<Map<String, dynamic>> register(
+      String email, String password, String name) async {
     try {
       Logger.d('User register: $email');
 
       final response = await _apiProvider.register(email, password, name);
+      Logger.d("User register response: ${response.bodyString}");
 
-      if (response.status.isOk && response.body != null) {
+      // 处理API响应
+      final apiResponse =
+          _apiProvider.handleResponse<Map<String, dynamic>>(response);
+
+      if (apiResponse.isSuccess && apiResponse.data != null) {
         // 保存令牌
-        final token = response.body['token'];
+        final token = apiResponse.data!['access_token'];
         if (token != null) {
+          Logger.d('Saving token: $token');
           await _storageProvider.saveUserToken(token);
           isLoggedIn.value = true;
 
-          // 获取用户信息
-          await getUserInfo();
+          // 如果响应中包含用户信息，直接使用
+          if (apiResponse.data!.containsKey('user')) {
+            final userData = apiResponse.data!['user'];
+            if (userData != null) {
+              final user = UserModel.fromJson(userData);
+              await _storageProvider.saveUserInfo(user);
+              currentUser.value = user;
+            }
+          } else {
+            // 否则获取用户信息
+            await getUserInfo();
+          }
 
-          return true;
+          return {
+            'success': true,
+            'message': apiResponse.message,
+          };
         }
       }
 
-      return false;
+      // 返回错误信息
+      return {
+        'success': false,
+        'message': apiResponse.message,
+        'code': apiResponse.code,
+      };
     } catch (e) {
       Logger.e('Register error: $e');
-      return false;
+      return {
+        'success': false,
+        'message': '注册失败: $e',
+        'code': 500,
+      };
     }
   }
 
@@ -114,9 +173,14 @@ class UserService extends GetxService {
 
       // 如果本地没有，则从API获取
       final response = await _apiProvider.getUserInfo();
+      Logger.d("Get user info response: ${response.bodyString}");
 
-      if (response.status.isOk && response.body != null) {
-        user = UserModel.fromJson(response.body);
+      // 处理API响应
+      final apiResponse =
+          _apiProvider.handleResponse<Map<String, dynamic>>(response);
+
+      if (apiResponse.isSuccess && apiResponse.data != null) {
+        user = UserModel.fromJson(apiResponse.data!);
 
         // 保存到本地
         await _storageProvider.saveUserInfo(user);
@@ -127,6 +191,8 @@ class UserService extends GetxService {
         return user;
       }
 
+      // 如果响应不成功，记录错误
+      Logger.e('Get user info failed: ${apiResponse.message}');
       return null;
     } catch (e) {
       Logger.e('Get user info error: $e');
@@ -213,11 +279,11 @@ class UserService extends GetxService {
   }
 
   /// 获取积分套餐
-  Future<List<Map<String, dynamic>>> getPointsPackages() async {
+  Future<List<Map<String, dynamic>>> getCreditsPackages() async {
     try {
-      Logger.d('Getting points packages');
+      Logger.d('Getting credits packages');
 
-      final response = await _apiProvider.getPointsPackages();
+      final response = await _apiProvider.getCreditsPackages();
 
       if (response.status.isOk && response.body != null) {
         return List<Map<String, dynamic>>.from(response.body);
@@ -225,7 +291,7 @@ class UserService extends GetxService {
 
       return [];
     } catch (e) {
-      Logger.e('Get points packages error: $e');
+      Logger.e('Get credits packages error: $e');
       return [];
     }
   }
@@ -249,16 +315,37 @@ class UserService extends GetxService {
   /// 发送重置密码邮件
   ///
   /// [email] 邮箱
-  Future<bool> sendResetPasswordEmail(String email) async {
+  Future<Map<String, dynamic>> sendResetPasswordEmail(String email) async {
     try {
       Logger.d('Sending reset password email: $email');
 
       final response = await _apiProvider.sendResetPasswordEmail(email);
+      Logger.d("Send reset password email response: ${response.bodyString}");
 
-      return response.status.isOk;
+      // 处理API响应
+      final apiResponse =
+          _apiProvider.handleResponse<Map<String, dynamic>>(response);
+
+      if (apiResponse.isSuccess) {
+        return {
+          'success': true,
+          'message': apiResponse.message,
+        };
+      }
+
+      // 返回错误信息
+      return {
+        'success': false,
+        'message': apiResponse.message,
+        'code': apiResponse.code,
+      };
     } catch (e) {
       Logger.e('Send reset password email error: $e');
-      return false;
+      return {
+        'success': false,
+        'message': '发送重置密码邮件失败: $e',
+        'code': 500,
+      };
     }
   }
 
@@ -267,7 +354,7 @@ class UserService extends GetxService {
   /// [identityToken] Apple 身份令牌
   /// [email] 邮箱
   /// [name] 用户名
-  Future<bool> loginWithApple({
+  Future<Map<String, dynamic>> loginWithApple({
     required String identityToken,
     String? email,
     String? name,
@@ -284,25 +371,53 @@ class UserService extends GetxService {
 
       // 调用 API
       final response = await _apiProvider.loginWithApple(data);
+      Logger.d("Apple login response: ${response.bodyString}");
 
-      if (response.status.isOk && response.body != null) {
+      // 处理API响应
+      final apiResponse =
+          _apiProvider.handleResponse<Map<String, dynamic>>(response);
+
+      if (apiResponse.isSuccess && apiResponse.data != null) {
         // 保存令牌
-        final token = response.body['token'];
+        final token = apiResponse.data!['access_token'];
         if (token != null) {
+          Logger.d('Saving token: $token');
           await _storageProvider.saveUserToken(token);
           isLoggedIn.value = true;
 
-          // 获取用户信息
-          await getUserInfo();
+          // 如果响应中包含用户信息，直接使用
+          if (apiResponse.data!.containsKey('user')) {
+            final userData = apiResponse.data!['user'];
+            if (userData != null) {
+              final user = UserModel.fromJson(userData);
+              await _storageProvider.saveUserInfo(user);
+              currentUser.value = user;
+            }
+          } else {
+            // 否则获取用户信息
+            await getUserInfo();
+          }
 
-          return true;
+          return {
+            'success': true,
+            'message': apiResponse.message,
+          };
         }
       }
 
-      return false;
+      // 返回错误信息
+      return {
+        'success': false,
+        'message': apiResponse.message,
+        'code': apiResponse.code,
+      };
     } catch (e) {
       Logger.e('Login with Apple error: $e');
-      return false;
+      return {
+        'success': false,
+        'message': 'Apple登录失败: $e',
+        'code': 500,
+      };
     }
   }
 
@@ -311,7 +426,7 @@ class UserService extends GetxService {
   /// [idToken] Google ID 令牌
   /// [email] 邮箱
   /// [name] 用户名
-  Future<bool> loginWithGoogle({
+  Future<Map<String, dynamic>> loginWithGoogle({
     required String idToken,
     required String email,
     String? name,
@@ -328,25 +443,53 @@ class UserService extends GetxService {
 
       // 调用 API
       final response = await _apiProvider.loginWithGoogle(data);
+      Logger.d("Google login response: ${response.bodyString}");
 
-      if (response.status.isOk && response.body != null) {
+      // 处理API响应
+      final apiResponse =
+          _apiProvider.handleResponse<Map<String, dynamic>>(response);
+
+      if (apiResponse.isSuccess && apiResponse.data != null) {
         // 保存令牌
-        final token = response.body['token'];
+        final token = apiResponse.data!['access_token'];
         if (token != null) {
+          Logger.d('Saving token: $token');
           await _storageProvider.saveUserToken(token);
           isLoggedIn.value = true;
 
-          // 获取用户信息
-          await getUserInfo();
+          // 如果响应中包含用户信息，直接使用
+          if (apiResponse.data!.containsKey('user')) {
+            final userData = apiResponse.data!['user'];
+            if (userData != null) {
+              final user = UserModel.fromJson(userData);
+              await _storageProvider.saveUserInfo(user);
+              currentUser.value = user;
+            }
+          } else {
+            // 否则获取用户信息
+            await getUserInfo();
+          }
 
-          return true;
+          return {
+            'success': true,
+            'message': apiResponse.message,
+          };
         }
       }
 
-      return false;
+      // 返回错误信息
+      return {
+        'success': false,
+        'message': apiResponse.message,
+        'code': apiResponse.code,
+      };
     } catch (e) {
       Logger.e('Login with Google error: $e');
-      return false;
+      return {
+        'success': false,
+        'message': 'Google登录失败: $e',
+        'code': 500,
+      };
     }
   }
 

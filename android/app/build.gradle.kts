@@ -54,7 +54,8 @@ android {
             isDebuggable = true
             isMinifyEnabled = false
             versionNameSuffix = ".test"
-            signingConfig = signingConfigs.getByName("release")
+            // 暂时禁用签名配置，以便于开发测试
+            // signingConfig = signingConfigs.getByName("release")
             buildConfigField("boolean", "IS_DEV_MODE", "true")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
@@ -71,6 +72,10 @@ android {
 
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_17.toString()
+    }
+
+    kotlin {
+        jvmToolchain(17)
     }
 }
 

@@ -33,6 +33,7 @@
 -keepattributes *Annotation*,InnerClasses
 -keepattributes Signature
 -keepattributes SourceFile,LineNumberTable
+-keep class javax.xml.stream.XMLStreamException.**{*;}
 
 #如果引用了v4或者v7包
 -dontwarn android.support.**

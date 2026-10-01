@@ -7,15 +7,33 @@ import '../controllers/login_controller.dart';
 
 /// 登录页面
 class LoginView extends GetView<LoginController> {
-  const LoginView({Key? key}) : super(key: key);
+  const LoginView({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: AppColors.textPrimary),
+          onPressed: () => Get.back(),
+        ),
+      ),
       body: SafeArea(
         child: GestureDetector(
           onTap: () => FocusScope.of(context).unfocus(),
           child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  AppColors.surface,
+                  AppColors.surfaceVariant,
+                ],
+              ),
+            ),
             child: Center(
               child: SingleChildScrollView(
                 child: Padding(
@@ -56,7 +74,7 @@ class LoginView extends GetView<LoginController> {
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withAlpha(26),
+                color: AppColors.shadow,
                 blurRadius: 10,
                 offset: const Offset(0, 5),
               ),
@@ -75,7 +93,7 @@ class LoginView extends GetView<LoginController> {
         Text(
           'TubeSavely',
           style: AppTextStyles.headlineLarge.copyWith(
-            color: Colors.white,
+            color: AppColors.textPrimary,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -85,7 +103,7 @@ class LoginView extends GetView<LoginController> {
           return Text(
             controller.isRegisterMode.value ? '创建新账号' : '欢迎回来',
             style: AppTextStyles.titleMedium.copyWith(
-              color: Colors.white.withAlpha(204),
+              color: AppColors.textSecondary,
             ),
           );
         }),
@@ -139,7 +157,7 @@ class LoginView extends GetView<LoginController> {
                   child: Text(
                     '忘记密码?',
                     style: AppTextStyles.bodySmall.copyWith(
-                      color: Colors.white.withAlpha(204),
+                      color: AppColors.textSecondary,
                     ),
                   ),
                 ),
@@ -167,7 +185,7 @@ class LoginView extends GetView<LoginController> {
                 controller.obscurePassword.value
                     ? Icons.visibility
                     : Icons.visibility_off,
-                color: Colors.white.withAlpha(204),
+                color: AppColors.textSecondary,
               ),
               onPressed: controller.togglePasswordVisibility,
             ),
@@ -182,7 +200,7 @@ class LoginView extends GetView<LoginController> {
     return Text(
       label,
       style: AppTextStyles.bodyMedium.copyWith(
-        color: Colors.white.withAlpha(204),
+        color: AppColors.textSecondary,
       ),
     );
   }
@@ -201,21 +219,22 @@ class LoginView extends GetView<LoginController> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withAlpha(26),
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: AppColors.border),
       ),
       child: TextField(
         controller: controller,
         focusNode: focusNode,
-        style: AppTextStyles.bodyMedium.copyWith(color: Colors.white),
+        style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textPrimary),
         decoration: InputDecoration(
           hintText: hintText,
           hintStyle: AppTextStyles.bodyMedium.copyWith(
-            color: Colors.white.withAlpha(128),
+            color: AppColors.textSecondary,
           ),
           prefixIcon: Icon(
             prefixIcon,
-            color: Colors.white.withAlpha(204),
+            color: AppColors.textSecondary,
           ),
           suffixIcon: suffixIcon,
           border: InputBorder.none,
@@ -246,8 +265,8 @@ class LoginView extends GetView<LoginController> {
                 }
               },
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.white,
-          foregroundColor: AppColors.primary,
+          backgroundColor: AppColors.primary,
+          foregroundColor: AppColors.onPrimary,
           padding: EdgeInsets.symmetric(vertical: 16.h),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12.r),
@@ -260,13 +279,14 @@ class LoginView extends GetView<LoginController> {
                 height: 24.w,
                 child: CircularProgressIndicator(
                   strokeWidth: 2.w,
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                  valueColor:
+                      AlwaysStoppedAnimation<Color>(AppColors.onPrimary),
                 ),
               )
             : Text(
                 controller.isRegisterMode.value ? '注册' : '登录',
                 style: AppTextStyles.titleMedium.copyWith(
-                  color: AppColors.primary,
+                  color: AppColors.onPrimary,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -282,7 +302,8 @@ class LoginView extends GetView<LoginController> {
         child: Text(
           controller.isRegisterMode.value ? '已有账号? 登录' : '没有账号? 注册',
           style: AppTextStyles.bodyMedium.copyWith(
-            color: Colors.white,
+            color: AppColors.primary,
+            fontWeight: FontWeight.w500,
           ),
         ),
       );
@@ -296,7 +317,7 @@ class LoginView extends GetView<LoginController> {
         Text(
           '或者使用以下方式登录',
           style: AppTextStyles.bodySmall.copyWith(
-            color: Colors.white.withAlpha(204),
+            color: AppColors.textSecondary,
           ),
           textAlign: TextAlign.center,
         ),
@@ -330,11 +351,11 @@ class LoginView extends GetView<LoginController> {
         width: 50.w,
         height: 50.w,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withAlpha(26),
+              color: AppColors.shadow,
               blurRadius: 5,
               offset: const Offset(0, 2),
             ),

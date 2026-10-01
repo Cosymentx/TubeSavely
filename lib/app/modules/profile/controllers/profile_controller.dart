@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../data/models/user_model.dart';
 import '../../../routes/app_pages.dart';
@@ -64,11 +65,53 @@ class ProfileController extends GetxController {
 
   /// 登录
   void login() {
-    Get.toNamed('/login');
+    Get.toNamed(Routes.LOGIN);
   }
 
   /// 退出登录
-  Future<void> logout() async {
+  void logout() {
+    // 显示确认对话框
+    Get.dialog(
+      AlertDialog(
+        title: Text(
+          '确认退出',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
+        ),
+        content: Text(
+          '您确定要退出登录吗？退出后需要重新登录才能使用会员功能。',
+          style: TextStyle(fontSize: 14),
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(), // 关闭对话框
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.grey[600],
+            ),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () {
+              Get.back(); // 关闭对话框
+              _performLogout(); // 执行退出登录
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
+            child: const Text('确定退出'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 执行退出登录
+  Future<void> _performLogout() async {
     try {
       isLoading.value = true;
       await _userService.logout();
@@ -100,8 +143,14 @@ class ProfileController extends GetxController {
   /// 跳转到会员页面
   void goToMembership() {
     try {
-      // 跳转到支付页面，并选择会员标签
-      Get.toNamed(Routes.PAYMENT, arguments: {'initialTab': 0});
+      // 检查用户是否已登录
+      if (isLoggedIn.value) {
+        // 跳转到支付页面，并选择会员标签
+        Get.toNamed(Routes.PAYMENT, arguments: {'initialTab': 0});
+      } else {
+        // 未登录，先跳转到登录页面
+        Get.toNamed(Routes.LOGIN);
+      }
     } catch (e) {
       Logger.e('Navigation error: $e');
       Utils.showSnackbar('错误', '导航到会员页面失败', isError: true);
@@ -109,10 +158,16 @@ class ProfileController extends GetxController {
   }
 
   /// 跳转到积分页面
-  void goToPoints() {
+  void goToCredits() {
     try {
-      // 跳转到支付页面，并选择积分标签
-      Get.toNamed(Routes.PAYMENT, arguments: {'initialTab': 1});
+      // 检查用户是否已登录
+      if (isLoggedIn.value) {
+        // 跳转到支付页面，并选择积分标签
+        Get.toNamed(Routes.PAYMENT, arguments: {'initialTab': 1});
+      } else {
+        // 未登录，先跳转到登录页面
+        Get.toNamed(Routes.LOGIN);
+      }
     } catch (e) {
       Logger.e('Navigation error: $e');
       Utils.showSnackbar('错误', '导航到积分页面失败', isError: true);
@@ -133,15 +188,21 @@ class ProfileController extends GetxController {
   /// 跳转到历史记录页面
   void goToHistory() {
     try {
-      // 如果在主页面中，直接切换标签
-      final mainController = Get.find<MainController>(tag: null);
+      // 先尝试返回到主页面
+      if (Get.currentRoute != Routes.MAIN) {
+        Get.until((route) => route.settings.name == Routes.MAIN);
+      }
+
+      // 切换到历史记录标签页
+      final mainController = Get.find<MainController>();
       mainController.changePage(1); // 历史记录页面索引为1
     } catch (e) {
-      // 如果不在主页面中，使用路由导航
+      Logger.e('Navigation error: $e');
+      // 如果失败，尝试直接导航到历史页面
       try {
         Get.toNamed(Routes.HISTORY);
-      } catch (e) {
-        Logger.e('Navigation error: $e');
+      } catch (e2) {
+        Logger.e('Secondary navigation error: $e2');
         Utils.showSnackbar('错误', '导航到历史记录页面失败', isError: true);
       }
     }
@@ -150,15 +211,21 @@ class ProfileController extends GetxController {
   /// 跳转到下载任务页面
   void goToTasks() {
     try {
-      // 如果在主页面中，直接切换标签
-      final mainController = Get.find<MainController>(tag: null);
+      // 先尝试返回到主页面
+      if (Get.currentRoute != Routes.MAIN) {
+        Get.until((route) => route.settings.name == Routes.MAIN);
+      }
+
+      // 切换到任务标签页
+      final mainController = Get.find<MainController>();
       mainController.changePage(2); // 任务页面索引为2
     } catch (e) {
-      // 如果不在主页面中，使用路由导航
+      Logger.e('Navigation error: $e');
+      // 如果失败，尝试直接导航到任务页面
       try {
         Get.toNamed(Routes.TASKS);
-      } catch (e) {
-        Logger.e('Navigation error: $e');
+      } catch (e2) {
+        Logger.e('Secondary navigation error: $e2');
         Utils.showSnackbar('错误', '导航到下载任务页面失败', isError: true);
       }
     }

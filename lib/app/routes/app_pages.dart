@@ -1,7 +1,15 @@
 import 'package:get/get.dart';
 
+import '../modules/api_test/bindings/api_test_binding.dart';
+import '../modules/api_test/views/api_test_view.dart';
+import '../modules/credit/bindings/credit_binding.dart';
+import '../modules/credit/views/credit_view.dart';
 import '../modules/developer/bindings/developer_binding.dart';
 import '../modules/developer/views/developer_view.dart';
+import '../modules/feedback/bindings/feedback_binding.dart';
+import '../modules/feedback/views/feedback_view.dart';
+import '../modules/task/bindings/task_binding.dart';
+import '../modules/task/views/task_view.dart';
 import '../modules/history/bindings/history_binding.dart';
 import '../modules/history/views/history_view.dart';
 import '../modules/home/bindings/home_binding.dart';
@@ -44,6 +52,11 @@ class AppPages {
       name: _Paths.MAIN,
       page: () => const MainView(),
       binding: MainBinding(),
+    ),
+    GetPage(
+      name: _Paths.FEEDBACK,
+      page: () => const FeedbackView(),
+      binding: FeedbackBinding(),
     ),
     GetPage(
       name: _Paths.HOME,
@@ -119,6 +132,21 @@ class AppPages {
       name: _Paths.DEVELOPER,
       page: () => const DeveloperView(),
       binding: DeveloperBinding(),
+    ),
+    GetPage(
+      name: _Paths.API_TEST,
+      page: () => const ApiTestView(),
+      binding: ApiTestBinding(),
+    ),
+    GetPage(
+      name: _Paths.TASK,
+      page: () => const TaskView(),
+      binding: TaskBinding(),
+    ),
+    GetPage(
+      name: _Paths.CREDIT,
+      page: () => const CreditView(),
+      binding: CreditBinding(),
     ),
   ];
 }

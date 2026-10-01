@@ -77,7 +77,7 @@ class ProfileView extends GetView<ProfileController> {
             height: 80.w,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.white,
+              color: AppColors.surface,
               image: user?.avatar != null
                   ? DecorationImage(
                       image: NetworkImage(user!.avatar!),
@@ -96,9 +96,9 @@ class ProfileView extends GetView<ProfileController> {
           SizedBox(height: 16.h),
           // 用户名
           Text(
-            user?.name ?? '未知用户',
+            user?.username ?? '未知用户',
             style: AppTextStyles.titleLarge.copyWith(
-              color: Colors.white,
+              color: AppColors.surface,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -110,13 +110,13 @@ class ProfileView extends GetView<ProfileController> {
               vertical: 4.h,
             ),
             decoration: BoxDecoration(
-              color: Colors.white.withAlpha(51),
+              color: AppColors.surface.withAlpha(51),
               borderRadius: BorderRadius.circular(16.r),
             ),
             child: Text(
               controller.getMembershipStatus(),
               style: AppTextStyles.bodySmall.copyWith(
-                color: Colors.white,
+                color: AppColors.surface,
               ),
             ),
           ),
@@ -135,9 +135,9 @@ class ProfileView extends GetView<ProfileController> {
           height: 80.w,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.white,
+            color: AppColors.surface,
             border: Border.all(
-              color: Colors.white,
+              color: AppColors.surface,
               width: 2.w,
             ),
           ),
@@ -152,7 +152,7 @@ class ProfileView extends GetView<ProfileController> {
         ElevatedButton(
           onPressed: controller.login,
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.white,
+            backgroundColor: AppColors.surface,
             foregroundColor: AppColors.primary,
             padding: EdgeInsets.symmetric(
               horizontal: 24.w,
@@ -187,11 +187,11 @@ class ProfileView extends GetView<ProfileController> {
         margin: EdgeInsets.symmetric(horizontal: 16.w),
         padding: EdgeInsets.all(16.w),
         decoration: BoxDecoration(
-          color: Get.theme.colorScheme.surface,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(12.r),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withAlpha(13),
+              color: AppColors.shadow,
               blurRadius: 10,
               offset: const Offset(0, 2),
             ),
@@ -209,7 +209,7 @@ class ProfileView extends GetView<ProfileController> {
             SizedBox(height: 16.h),
             _buildInfoItem('会员等级', controller.getMembershipStatus()),
             _buildInfoItem('会员到期', controller.getMembershipExpiry()),
-            _buildInfoItem('积分余额', '${user.points}'),
+            _buildInfoItem('积分余额', '${user.credits}'),
             _buildInfoItem('注册时间', controller.getRegistrationDate()),
           ],
         ),
@@ -227,7 +227,7 @@ class ProfileView extends GetView<ProfileController> {
           Text(
             label,
             style: AppTextStyles.bodyMedium.copyWith(
-              color: Get.theme.colorScheme.onSurface.withAlpha(153),
+              color: AppColors.textSecondary,
             ),
           ),
           Flexible(
@@ -250,11 +250,11 @@ class ProfileView extends GetView<ProfileController> {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16.w),
       decoration: BoxDecoration(
-        color: Get.theme.colorScheme.surface,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(12.r),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(13),
+            color: AppColors.shadow,
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -283,7 +283,7 @@ class ProfileView extends GetView<ProfileController> {
           _buildFunctionItem(
             icon: Icons.monetization_on,
             title: '积分中心',
-            onTap: controller.goToPoints,
+            onTap: controller.goToCredits,
           ),
           _buildDivider(),
           _buildFunctionItem(
@@ -340,7 +340,7 @@ class ProfileView extends GetView<ProfileController> {
             Icon(
               Icons.arrow_forward_ios,
               size: 16.sp,
-              color: Get.theme.colorScheme.onSurface.withAlpha(77),
+              color: AppColors.textSecondary,
             ),
           ],
         ),
@@ -353,7 +353,7 @@ class ProfileView extends GetView<ProfileController> {
     return Divider(
       height: 1,
       thickness: 1,
-      color: Get.theme.colorScheme.onSurface.withAlpha(13),
+      color: AppColors.border,
       indent: 56.w,
     );
   }
@@ -363,11 +363,11 @@ class ProfileView extends GetView<ProfileController> {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16.w),
       decoration: BoxDecoration(
-        color: Get.theme.colorScheme.surface,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(12.r),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(13),
+            color: AppColors.shadow,
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -503,8 +503,8 @@ class ProfileView extends GetView<ProfileController> {
         child: ElevatedButton(
           onPressed: controller.isLoading.value ? null : controller.logout,
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red.shade100,
-            foregroundColor: Colors.red,
+            backgroundColor: AppColors.error.withAlpha(30),
+            foregroundColor: AppColors.error,
             padding: EdgeInsets.symmetric(vertical: 16.h),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12.r),
@@ -517,13 +517,13 @@ class ProfileView extends GetView<ProfileController> {
                   height: 24.w,
                   child: CircularProgressIndicator(
                     strokeWidth: 2.w,
-                    valueColor: const AlwaysStoppedAnimation<Color>(Colors.red),
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.error),
                   ),
                 )
               : Text(
                   '退出登录',
                   style: AppTextStyles.titleMedium.copyWith(
-                    color: Colors.red,
+                    color: AppColors.error,
                     fontWeight: FontWeight.bold,
                   ),
                 ),

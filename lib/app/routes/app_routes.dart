@@ -18,6 +18,10 @@ abstract class Routes {
   static const PROFILE = _Paths.PROFILE;
   static const CONVERT = _Paths.CONVERT;
   static const DEVELOPER = _Paths.DEVELOPER;
+  static const FEEDBACK = _Paths.FEEDBACK;
+  static const API_TEST = _Paths.API_TEST;
+  static const TASK = _Paths.TASK;
+  static const CREDIT = _Paths.CREDIT;
 }
 
 abstract class _Paths {
@@ -38,4 +42,8 @@ abstract class _Paths {
   static const PROFILE = '/profile';
   static const CONVERT = '/convert';
   static const DEVELOPER = '/developer';
+  static const FEEDBACK = '/feedback';
+  static const API_TEST = '/api-test';
+  static const TASK = '/task';
+  static const CREDIT = '/credit';
 }

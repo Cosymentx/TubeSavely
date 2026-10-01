@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:get/get.dart';
 import '../models/user_model.dart';
 import '../providers/api_provider.dart';
@@ -17,7 +18,7 @@ class UserRepository {
     try {
       final response = await _apiProvider.getUserInfo();
       if (response.status.isOk) {
-        user = UserModel.fromJson(response.body);
+        user = UserModel.fromJson(response.body['data'] ?? {});
         // 保存到本地
         await _storageProvider.saveUserInfo(user);
         return user;
@@ -25,6 +26,39 @@ class UserRepository {
       return null;
     } catch (e) {
       return null;
+    }
+  }
+
+  // 更新用户信息
+  Future<bool> updateUserInfo(Map<String, dynamic> userData) async {
+    try {
+      final response = await _apiProvider.updateUserInfo(userData);
+      if (response.status.isOk) {
+        // 更新本地用户信息
+        final user = UserModel.fromJson(response.body['data'] ?? {});
+        await _storageProvider.saveUserInfo(user);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // 上传用户头像
+  Future<bool> uploadAvatar(String filePath) async {
+    try {
+      final file = File(filePath);
+      final response = await _apiProvider.uploadAvatar(file);
+      if (response.status.isOk) {
+        // 更新本地用户信息
+        final user = UserModel.fromJson(response.body['data'] ?? {});
+        await _storageProvider.saveUserInfo(user);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      return false;
     }
   }
 

@@ -95,7 +95,8 @@ class ConvertView extends GetView<ConvertController> {
             spacing: 8.w,
             runSpacing: 8.h,
             children: controller.availableResolutions.map((resolution) {
-              final isSelected = controller.selectedResolution.value == resolution;
+              final isSelected =
+                  controller.selectedResolution.value == resolution;
               return ChoiceChip(
                 label: Text(resolution),
                 selected: isSelected,
@@ -139,7 +140,8 @@ class ConvertView extends GetView<ConvertController> {
                 padding: EdgeInsets.symmetric(vertical: 24.h),
                 child: Column(
                   children: [
-                    Icon(Icons.video_file, size: 48.sp, color: AppColors.textSecondary),
+                    Icon(Icons.video_file,
+                        size: 48.sp, color: AppColors.textSecondary),
                     SizedBox(height: 8.h),
                     Text('暂无选择的视频文件', style: AppTextStyles.bodyMedium),
                     SizedBox(height: 16.h),
@@ -219,7 +221,8 @@ class ConvertView extends GetView<ConvertController> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.list, size: 48.sp, color: AppColors.textSecondary),
+                      Icon(Icons.list,
+                          size: 48.sp, color: AppColors.textSecondary),
                       SizedBox(height: 8.h),
                       Text('暂无转换任务', style: AppTextStyles.bodyMedium),
                     ],
@@ -256,7 +259,18 @@ class ConvertView extends GetView<ConvertController> {
           children: [
             Row(
               children: [
-                Icon(Icons.video_file, color: AppColors.primary),
+                Icon(
+                  task.status == ConversionStatus.failed
+                      ? Icons.error_outline
+                      : (task.status == ConversionStatus.completed
+                          ? Icons.check_circle_outline
+                          : Icons.video_file),
+                  color: task.status == ConversionStatus.failed
+                      ? AppColors.error
+                      : (task.status == ConversionStatus.completed
+                          ? AppColors.success
+                          : AppColors.primary),
+                ),
                 SizedBox(width: 8.w),
                 Expanded(
                   child: Column(
@@ -277,7 +291,7 @@ class ConvertView extends GetView<ConvertController> {
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.1),
+                    color: statusColor.withAlpha(25),
                     borderRadius: BorderRadius.circular(4.r),
                   ),
                   child: Text(
@@ -287,15 +301,78 @@ class ConvertView extends GetView<ConvertController> {
                 ),
               ],
             ),
-            if (task.status == ConversionStatus.converting || task.status == ConversionStatus.pending)
+            if (task.status == ConversionStatus.converting ||
+                task.status == ConversionStatus.pending)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.only(top: 8.h),
+                    child: LinearProgressIndicator(
+                      value: task.progress,
+                      backgroundColor: AppColors.border,
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(AppColors.primary),
+                    ),
+                  ),
+                  SizedBox(height: 4.h),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        task.statusMessage ??
+                            (task.status == ConversionStatus.pending
+                                ? '等待中...'
+                                : '转换中...'),
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                          fontSize: 10.sp,
+                        ),
+                      ),
+                      Text(
+                        '${(task.progress * 100).toStringAsFixed(1)}%',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 10.sp,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            // 显示错误信息（如果有）
+            if (task.status == ConversionStatus.failed &&
+                task.statusMessage != null)
               Padding(
                 padding: EdgeInsets.only(top: 8.h),
-                child: LinearProgressIndicator(
-                  value: task.progress,
-                  backgroundColor: AppColors.border,
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                child: Container(
+                  padding: EdgeInsets.all(8.w),
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withAlpha(15),
+                    borderRadius: BorderRadius.circular(4.r),
+                    border: Border.all(color: AppColors.error.withAlpha(50)),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.error_outline,
+                          color: AppColors.error, size: 16.sp),
+                      SizedBox(width: 8.w),
+                      Expanded(
+                        child: Text(
+                          task.statusMessage!,
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.error,
+                            fontSize: 11.sp,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
+
             SizedBox(height: 8.h),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
@@ -309,13 +386,33 @@ class ConvertView extends GetView<ConvertController> {
                       foregroundColor: AppColors.success,
                     ),
                   ),
-                if (task.status == ConversionStatus.pending || task.status == ConversionStatus.converting)
+                if (task.status == ConversionStatus.completed)
+                  TextButton.icon(
+                    onPressed: () =>
+                        controller.openFileLocation(task.targetFilePath),
+                    icon: const Icon(Icons.folder_open),
+                    label: const Text('打开位置'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                    ),
+                  ),
+                if (task.status == ConversionStatus.pending ||
+                    task.status == ConversionStatus.converting)
                   TextButton.icon(
                     onPressed: () => controller.cancelTask(task.id),
                     icon: const Icon(Icons.cancel),
                     label: const Text('取消'),
                     style: TextButton.styleFrom(
                       foregroundColor: AppColors.error,
+                    ),
+                  ),
+                if (task.status == ConversionStatus.failed)
+                  TextButton.icon(
+                    onPressed: () => controller.retryTask(task),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('重试'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.primary,
                     ),
                   ),
                 TextButton.icon(

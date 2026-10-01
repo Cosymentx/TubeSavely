@@ -48,7 +48,7 @@ class TransactionHistoryController extends GetxController {
         await _loadMockTransactions();
       } else {
         // 获取交易记录
-        final result = await _paymentRepository.getTransactions(
+        final result = await _paymentRepository.getTransactionsCompat(
           page: currentPage.value,
           pageSize: pageSize,
         );
@@ -80,7 +80,7 @@ class TransactionHistoryController extends GetxController {
       OrderModel(
         id: 'order_001',
         productId: 'membership_monthly',
-        userId: userId,
+        userId: userId.toString(),
         amount: 18.0,
         currency: 'CNY',
         status: 'completed',
@@ -91,8 +91,8 @@ class TransactionHistoryController extends GetxController {
       ),
       OrderModel(
         id: 'order_002',
-        productId: 'points_500',
-        userId: userId,
+        productId: 'credit_500',
+        userId: userId.toString(),
         amount: 50.0,
         currency: 'CNY',
         status: 'completed',
@@ -104,7 +104,7 @@ class TransactionHistoryController extends GetxController {
       OrderModel(
         id: 'order_003',
         productId: 'membership_pro_yearly',
-        userId: userId,
+        userId: userId.toString(),
         amount: 258.0,
         currency: 'CNY',
         status: 'pending',
@@ -113,8 +113,8 @@ class TransactionHistoryController extends GetxController {
       ),
       OrderModel(
         id: 'order_004',
-        productId: 'points_100',
-        userId: userId,
+        productId: 'credit_100',
+        userId: userId.toString(),
         amount: 10.0,
         currency: 'CNY',
         status: 'failed',
@@ -144,7 +144,7 @@ class TransactionHistoryController extends GetxController {
       currentPage.value++;
 
       // 获取交易记录
-      final result = await _paymentRepository.getTransactions(
+      final result = await _paymentRepository.getTransactionsCompat(
         page: currentPage.value,
         pageSize: pageSize,
       );

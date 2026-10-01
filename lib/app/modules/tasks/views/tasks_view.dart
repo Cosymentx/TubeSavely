@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../controllers/tasks_controller.dart';
 import '../../../theme/app_theme.dart';
 import '../../../data/models/download_task_model.dart';
+import '../../../theme/app_text_styles.dart';
 
 class TasksView extends GetView<TasksController> {
   const TasksView({Key? key}) : super(key: key);
@@ -15,10 +16,7 @@ class TasksView extends GetView<TasksController> {
       appBar: AppBar(
         title: Text(
           '下载任务',
-          style: TextStyle(
-            fontSize: 18.sp,
-            fontWeight: FontWeight.bold,
-          ),
+          style: AppTextStyles.titleLarge,
         ),
         centerTitle: true,
         elevation: 0,
@@ -205,7 +203,7 @@ class TasksView extends GetView<TasksController> {
   Widget _buildTaskItem(DownloadTaskModel task) {
     return Obx(() {
       final isSelected = controller.isSelected(task);
-      
+
       return Card(
         margin: EdgeInsets.only(bottom: 12.h),
         shape: RoundedRectangleBorder(
@@ -290,14 +288,16 @@ class TasksView extends GetView<TasksController> {
                                 Icon(
                                   Icons.videocam,
                                   size: 14.sp,
-                                  color: Get.theme.colorScheme.onSurface.withOpacity(0.6),
+                                  color: Get.theme.colorScheme.onSurface
+                                      .withOpacity(0.6),
                                 ),
                                 SizedBox(width: 4.w),
                                 Text(
                                   task.platform!,
                                   style: TextStyle(
                                     fontSize: 12.sp,
-                                    color: Get.theme.colorScheme.onSurface.withOpacity(0.6),
+                                    color: Get.theme.colorScheme.onSurface
+                                        .withOpacity(0.6),
                                   ),
                                 ),
                               ],
@@ -309,7 +309,8 @@ class TasksView extends GetView<TasksController> {
                               '${task.quality ?? ''} ${task.format ?? ''}',
                               style: TextStyle(
                                 fontSize: 12.sp,
-                                color: Get.theme.colorScheme.onSurface.withOpacity(0.6),
+                                color: Get.theme.colorScheme.onSurface
+                                    .withOpacity(0.6),
                               ),
                             ),
                         ],
@@ -325,7 +326,8 @@ class TasksView extends GetView<TasksController> {
                               : Icons.radio_button_unchecked,
                           color: isSelected
                               ? AppTheme.primaryColor
-                              : Get.theme.colorScheme.onSurface.withOpacity(0.3),
+                              : Get.theme.colorScheme.onSurface
+                                  .withOpacity(0.3),
                           size: 24.sp,
                         ),
                       )
@@ -357,14 +359,16 @@ class TasksView extends GetView<TasksController> {
                             task.progressText,
                             style: TextStyle(
                               fontSize: 12.sp,
-                              color: Get.theme.colorScheme.onSurface.withOpacity(0.6),
+                              color: Get.theme.colorScheme.onSurface
+                                  .withOpacity(0.6),
                             ),
                           ),
                           Text(
                             '${task.formattedDownloadedBytes} / ${task.formattedTotalBytes}',
                             style: TextStyle(
                               fontSize: 12.sp,
-                              color: Get.theme.colorScheme.onSurface.withOpacity(0.6),
+                              color: Get.theme.colorScheme.onSurface
+                                  .withOpacity(0.6),
                             ),
                           ),
                         ],
@@ -383,7 +387,7 @@ class TasksView extends GetView<TasksController> {
   Widget _buildStatusBadge(DownloadStatus status) {
     Color color;
     String text = status.toString().split('.').last;
-    
+
     switch (status) {
       case DownloadStatus.downloading:
         color = AppTheme.primaryColor;
@@ -410,7 +414,7 @@ class TasksView extends GetView<TasksController> {
         text = '已取消';
         break;
     }
-    
+
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
       decoration: BoxDecoration(

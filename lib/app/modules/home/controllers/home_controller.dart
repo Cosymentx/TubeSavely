@@ -3,9 +3,11 @@ import 'package:get/get.dart';
 import '../../../data/models/video_model.dart';
 import '../../../data/repositories/video_repository.dart';
 import '../../../data/repositories/download_repository.dart';
+import '../../../routes/app_pages.dart';
 import '../../../services/user_service.dart';
 import '../../../utils/utils.dart';
 import '../../../utils/logger.dart';
+import '../../../utils/dev_utils.dart';
 
 class HomeController extends GetxController {
   final VideoRepository _videoRepository = Get.find<VideoRepository>();
@@ -37,6 +39,10 @@ class HomeController extends GetxController {
     Logger.d('HomeController initialized');
     _loadSupportedPlatforms();
     _loadTrendingVideos();
+
+    if (DevUtils.isDevMode) {
+      urlController.text = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+    }
   }
 
   @override
@@ -47,7 +53,19 @@ class HomeController extends GetxController {
 
   // 加载支持的平台
   Future<void> _loadSupportedPlatforms() async {
-    supportedPlatforms.value = await _videoRepository.getSupportedPlatforms();
+    try {
+      Logger.d('Getting supported platforms');
+      supportedPlatforms.value = await _videoRepository.getSupportedPlatforms();
+    } catch (e) {
+      Logger.e('加载支持的平台时出错: $e');
+      // 使用本地图标作为备用
+      supportedPlatforms.value = [
+        {'name': 'YouTube', 'icon': 'assets/images/youtube.png'},
+        {'name': 'TikTok', 'icon': 'assets/images/tiktok.png'},
+        {'name': 'Instagram', 'icon': 'assets/images/instagram.png'},
+        {'name': 'Bilibili', 'icon': 'assets/images/bilibili.png'},
+      ];
+    }
   }
 
   // 解析视频链接
@@ -84,7 +102,7 @@ class HomeController extends GetxController {
         Utils.showSnackbar('成功', '视频解析成功');
 
         // 导航到视频详情页
-        Get.toNamed('/video-detail', arguments: video);
+        Get.toNamed(Routes.VIDEO_DETAIL, arguments: video);
       } else {
         Utils.showSnackbar('错误', '无法解析此视频链接', isError: true);
       }
@@ -154,7 +172,7 @@ class HomeController extends GetxController {
 
   // 打开视频详情
   void openVideoDetail(VideoModel video) {
-    Get.toNamed('/video-detail', arguments: video);
+    Get.toNamed(Routes.VIDEO_DETAIL, arguments: video);
   }
 
   // 跳转到会员页面
@@ -164,10 +182,10 @@ class HomeController extends GetxController {
       final userService = Get.find<UserService>();
       if (userService.isLoggedIn.value) {
         // 跳转到支付页面，并选择会员标签
-        Get.toNamed('/payment', arguments: {'initialTab': 0});
+        Get.toNamed(Routes.PAYMENT, arguments: {'initialTab': 0});
       } else {
         // 未登录，先跳转到登录页面
-        Get.toNamed('/login');
+        Get.toNamed(Routes.LOGIN);
       }
     } catch (e) {
       Logger.e('导航到会员页面时出错: $e');
@@ -176,16 +194,16 @@ class HomeController extends GetxController {
   }
 
   // 跳转到积分页面
-  void goToPoints() {
+  void goToCredits() {
     try {
       // 检查用户是否已登录
       final userService = Get.find<UserService>();
       if (userService.isLoggedIn.value) {
         // 跳转到支付页面，并选择积分标签
-        Get.toNamed('/payment', arguments: {'initialTab': 1});
+        Get.toNamed(Routes.PAYMENT, arguments: {'initialTab': 1});
       } else {
         // 未登录，先跳转到登录页面
-        Get.toNamed('/login');
+        Get.toNamed(Routes.LOGIN);
       }
     } catch (e) {
       Logger.e('导航到积分页面时出错: $e');

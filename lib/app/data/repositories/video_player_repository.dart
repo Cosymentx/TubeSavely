@@ -54,7 +54,10 @@ class VideoPlayerRepository {
   Future<void> playVideo({required String url, VideoModel? video}) async {
     try {
       Logger.d('Playing video: $url');
+      // 确保调用正确的方法名
       await _videoPlayerService.play(url: url, video: video);
+      // 添加日志以便调试
+      Logger.d('Video play request sent successfully');
     } catch (e) {
       Logger.e('Error playing video: $e');
       rethrow;
@@ -95,10 +98,11 @@ class VideoPlayerRepository {
   }
 
   /// 停止播放
-  void stopVideo() {
+  Future<void> stopVideo() async {
     try {
       Logger.d('Stopping video');
-      _videoPlayerService.stop();
+      await _videoPlayerService.stop();
+      Logger.d('Video stopped successfully');
     } catch (e) {
       Logger.e('Error stopping video: $e');
     }

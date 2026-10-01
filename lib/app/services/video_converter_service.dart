@@ -1,17 +1,12 @@
 import 'dart:io';
 import 'dart:async';
-import 'dart:math';
 import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
-import 'package:ffmpeg_kit_flutter_new/return_code.dart';
-import 'package:ffmpeg_kit_flutter_new/ffmpeg_session.dart';
-import 'package:ffmpeg_kit_flutter_new/ffprobe_kit.dart';
-import 'package:ffmpeg_kit_flutter_new/media_information.dart';
-import 'package:ffmpeg_kit_flutter_new/media_information_session.dart';
 import '../data/providers/storage_provider.dart';
 import '../utils/logger.dart';
 import '../utils/utils.dart';
+import 'video_processing/video_processing_service.dart';
+import 'video_processing/video_processing_factory.dart';
 
 /// 视频转换任务状态
 enum ConversionStatus {
@@ -36,6 +31,8 @@ class ConversionTask {
   final DateTime? completedAt;
   final double progress;
   final String? errorMessage;
+  final String? statusMessage;
+  final int? speed; // 转换速度，单位kbps
 
   ConversionTask({
     required this.id,
@@ -50,6 +47,8 @@ class ConversionTask {
     this.completedAt,
     this.progress = 0.0,
     this.errorMessage,
+    this.statusMessage,
+    this.speed,
   });
 
   ConversionTask copyWith({
@@ -65,6 +64,8 @@ class ConversionTask {
     DateTime? completedAt,
     double? progress,
     String? errorMessage,
+    String? statusMessage,
+    int? speed,
   }) {
     return ConversionTask(
       id: id ?? this.id,
@@ -79,6 +80,8 @@ class ConversionTask {
       completedAt: completedAt ?? this.completedAt,
       progress: progress ?? this.progress,
       errorMessage: errorMessage ?? this.errorMessage,
+      statusMessage: statusMessage ?? this.statusMessage,
+      speed: speed ?? this.speed,
     );
   }
 
@@ -96,6 +99,8 @@ class ConversionTask {
       'completedAt': completedAt?.millisecondsSinceEpoch,
       'progress': progress,
       'errorMessage': errorMessage,
+      'statusMessage': statusMessage,
+      'speed': speed,
     };
   }
 
@@ -117,6 +122,8 @@ class ConversionTask {
           : null,
       progress: json['progress'],
       errorMessage: json['errorMessage'],
+      statusMessage: json['statusMessage'],
+      speed: json['speed'],
     );
   }
 }
@@ -136,12 +143,27 @@ class VideoConverterService extends GetxService {
   // 是否正在转换
   final RxBool isConverting = false.obs;
 
-  // 转换会话管理，用于取消转换
-  final Map<String, FFmpegSession> _conversionSessions = {};
+  // 视频处理服务
+  late final VideoProcessingService _videoProcessingService;
+
+  // 当前转换任务ID
+  String? _currentTaskId;
 
   /// 初始化服务
   Future<VideoConverterService> init() async {
     Logger.d('VideoConverterService initialized');
+
+    // 初始化视频处理服务
+    _videoProcessingService = VideoProcessingFactory.getService();
+
+    // 检查服务是否可用
+    final isAvailable = await _videoProcessingService.isAvailable();
+    Logger.d('Video processing service available: $isAvailable');
+
+    if (!isAvailable) {
+      Logger.w('Video processing service is not available on this platform');
+      Utils.showSnackbar('提示', '视频处理服务在当前平台不可用，部分功能可能受限');
+    }
 
     // 加载已有的转换任务
     _loadTasks();
@@ -220,13 +242,11 @@ class VideoConverterService extends GetxService {
           return false;
         }
 
-        // 如果是正在转换的任务，取消FFmpeg会话
-        if (task.status == ConversionStatus.converting) {
-          final session = _conversionSessions[taskId];
-          if (session != null) {
-            await session.cancel();
-            _conversionSessions.remove(taskId);
-          }
+        // 如果是正在转换的任务，取消转换
+        if (task.status == ConversionStatus.converting &&
+            _currentTaskId == taskId) {
+          // 当前没有提供直接取消的方法，但我们可以标记任务为取消状态
+          _currentTaskId = null;
 
           // 重置状态
           isConverting.value = false;
@@ -420,7 +440,6 @@ class VideoConverterService extends GetxService {
 
   /// 转换视频
   Future<void> _convertVideo(ConversionTask task) async {
-    FFmpegSession? session;
     try {
       // 检查源文件是否存在
       final sourceFile = File(task.sourceFilePath);
@@ -428,18 +447,47 @@ class VideoConverterService extends GetxService {
         throw Exception('Source file does not exist: ${task.sourceFilePath}');
       }
 
-      // 获取视频信息
-      final duration = await _getVideoDuration(task.sourceFilePath);
+      // 检查源文件大小
+      final fileSize = await sourceFile.length();
+      if (fileSize <= 0) {
+        throw Exception('Source file is empty: ${task.sourceFilePath}');
+      }
 
-      // 构建FFmpeg命令
-      final command = _buildFFmpegCommand(task);
-      Logger.d('Starting video conversion: $command');
+      // 检查源文件是否可读
+      try {
+        final randomAccessFile = await sourceFile.open(mode: FileMode.read);
+        await randomAccessFile.close();
+      } catch (e) {
+        throw Exception(
+            'Source file is not readable: ${task.sourceFilePath}, Error: $e');
+      }
+
+      // 获取视频信息
+      final mediaInfo =
+          await _videoProcessingService.getMediaInfo(task.sourceFilePath);
+      final duration = mediaInfo != null && mediaInfo.containsKey('duration')
+          ? double.tryParse(mediaInfo['duration'].toString()) ?? 0.0
+          : 0.0;
+
+      if (duration <= 0) {
+        Logger.w('Invalid video duration: $duration, using default value');
+      }
 
       // 创建目标文件目录
       final targetFile = File(task.targetFilePath);
       final targetDir = targetFile.parent;
       if (!await targetDir.exists()) {
         await targetDir.create(recursive: true);
+      }
+
+      // 检查目标路径是否可写
+      try {
+        final testFile = File('${targetDir.path}/test_write.tmp');
+        await testFile.writeAsString('test');
+        await testFile.delete();
+      } catch (e) {
+        throw Exception(
+            'Target directory is not writable: ${targetDir.path}, Error: $e');
       }
 
       // 更新任务状态为转换中
@@ -450,108 +498,174 @@ class VideoConverterService extends GetxService {
       );
       await _updateTask(updatedTask);
 
-      // 执行FFmpeg命令
-      session = await FFmpegKit.executeAsync(
-        command,
-        (session) async {
-          // 完成回调
-          final returnCode = await session.getReturnCode();
+      // 通知用户转换开始
+      Utils.showSnackbar('转换开始', '开始转换 ${sourceFile.path.split('/').last}');
 
-          if (ReturnCode.isSuccess(returnCode)) {
-            // 转换成功
-            final completedTask = updatedTask.copyWith(
-              status: ConversionStatus.completed,
-              progress: 1.0,
-              updatedAt: DateTime.now(),
-              completedAt: DateTime.now(),
-            );
-            await _updateTask(completedTask);
+      // 设置当前任务ID
+      _currentTaskId = task.id;
 
-            Utils.showSnackbar(
-                '转换完成', '${task.sourceFilePath.split('/').last} 已转换完成');
-          } else if (ReturnCode.isCancel(returnCode)) {
-            // 转换被取消
-            final canceledTask = updatedTask.copyWith(
-              status: ConversionStatus.canceled,
-              updatedAt: DateTime.now(),
-            );
-            await _updateTask(canceledTask);
-          } else {
-            // 转换失败
-            final returnCode = await session.getReturnCode();
-            final errorMessage =
-                await session.getAllLogsAsString() ?? 'Unknown error';
-            final errorSummary = errorMessage.length > 200
-                ? '${errorMessage.substring(0, 200)}...'
-                : errorMessage;
+      // 准备转换选项
+      final Map<String, dynamic> options = _buildConversionOptions(task);
 
-            final failedTask = updatedTask.copyWith(
-              status: ConversionStatus.failed,
-              errorMessage:
-                  'Error code: ${returnCode?.getValue() ?? 'unknown'}, Message: $errorSummary',
+      // 执行视频转换
+      final outputPath = await _videoProcessingService.convertVideo(
+        task.sourceFilePath,
+        task.targetFilePath,
+        options: options,
+        onProgress: (type, progress) async {
+          // 进度回调
+          if (duration > 0) {
+            final clampedProgress = progress.clamp(0.0, 100.0) / 100.0;
+
+            // 更新任务进度
+            final progressTask = updatedTask.copyWith(
+              progress: clampedProgress,
+              statusMessage:
+                  '正在转换: ${(clampedProgress * 100).toStringAsFixed(1)}%',
               updatedAt: DateTime.now(),
             );
-            await _updateTask(failedTask);
 
-            Logger.e(
-                'Conversion failed with code ${returnCode?.getValue() ?? 'unknown'}: $errorSummary');
-            Utils.showSnackbar('转换失败', '视频转换失败，请检查源文件格式', isError: true);
+            // 更新任务状态
+            updatedTask = progressTask;
+            await _updateTask(progressTask);
+
+            // 打印转换进度
+            Logger.d(
+                'Conversion progress: ${(clampedProgress * 100).toStringAsFixed(1)}% for task ${task.id}');
           }
+        },
+        onFailure: (error) async {
+          // 如果当前任务已被取消，则不更新状态
+          if (_currentTaskId != task.id) {
+            return;
+          }
+
+          // 转换失败
+          final failedTask = updatedTask.copyWith(
+            status: ConversionStatus.failed,
+            errorMessage: 'Error: ${error.toString()}',
+            updatedAt: DateTime.now(),
+          );
+
+          await _updateTask(failedTask);
+
+          Logger.e('Video conversion error: ${error.toString()}');
+          Utils.showSnackbar('转换失败', '视频转换出错: ${error.toString()}',
+              isError: true);
 
           // 处理下一个任务
           isConverting.value = false;
           currentTask.value = null;
+          _currentTaskId = null;
           _processNextTask();
         },
-        (log) {
-          // 日志回调
-          Logger.d('FFmpeg log: ${log.getMessage()}');
-        },
-        (statistics) async {
-          // 进度回调
-          if (duration > 0) {
-            final timeInMs = statistics.getTime();
-            if (timeInMs > 0) {
-              final progress = timeInMs / (duration * 1000);
-
-              // 更新进度
-              updatedTask = updatedTask.copyWith(
-                progress: progress.clamp(0.0, 1.0),
-                updatedAt: DateTime.now(),
-              );
-              await _updateTask(updatedTask);
-
-              // 打印转换进度
-              final percent = (progress * 100).toStringAsFixed(1);
-              Logger.d('Conversion progress: $percent% for task ${task.id}');
-            }
-          }
-        },
       );
 
-      // 保存会话ID，用于取消
-      _conversionSessions[task.id] = session;
-    } catch (e) {
-      Logger.e('Error converting video: $e');
+      // 如果当前任务已被取消，则不更新状态
+      if (_currentTaskId != task.id) {
+        // 任务已被取消
+        final canceledTask = updatedTask.copyWith(
+          status: ConversionStatus.canceled,
+          updatedAt: DateTime.now(),
+        );
 
-      // 更新任务状态
-      final updatedTask = task.copyWith(
-        status: ConversionStatus.failed,
-        errorMessage: e.toString(),
-        updatedAt: DateTime.now(),
-      );
+        await _updateTask(canceledTask);
 
-      await _updateTask(updatedTask);
+        // 删除已生成的文件
+        final outputFile = File(task.targetFilePath);
+        if (await outputFile.exists()) {
+          await outputFile.delete();
+        }
+
+        return;
+      }
+
+      if (outputPath != null) {
+        // 检查输出文件是否存在且大小大于0
+        final outputFile = File(outputPath);
+        if (await outputFile.exists() && await outputFile.length() > 0) {
+          // 更新任务状态为已完成
+          final completedTask = updatedTask.copyWith(
+            status: ConversionStatus.completed,
+            progress: 1.0,
+            completedAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          );
+
+          await _updateTask(completedTask);
+
+          // 通知用户转换完成
+          Utils.showSnackbar(
+              '转换完成', '视频已转换完成: ${outputFile.path.split('/').last}');
+        } else {
+          // 输出文件不存在或为空
+          final failedTask = updatedTask.copyWith(
+            status: ConversionStatus.failed,
+            errorMessage: 'Output file does not exist or is empty: $outputPath',
+            updatedAt: DateTime.now(),
+          );
+
+          await _updateTask(failedTask);
+
+          Logger.e('Output file does not exist or is empty: $outputPath');
+          Utils.showSnackbar('转换失败', '输出文件不存在或为空，请检查存储空间', isError: true);
+        }
+      } else {
+        // 转换失败
+        final failedTask = updatedTask.copyWith(
+          status: ConversionStatus.failed,
+          errorMessage: 'Conversion failed with null output path',
+          updatedAt: DateTime.now(),
+        );
+
+        await _updateTask(failedTask);
+
+        Logger.e('Conversion failed with null output path');
+        Utils.showSnackbar('转换失败', '视频转换失败', isError: true);
+      }
 
       // 处理下一个任务
       isConverting.value = false;
       currentTask.value = null;
+      _currentTaskId = null;
+      _processNextTask();
+    } catch (e) {
+      Logger.e('Error converting video: $e');
+
+      // 提供更友好的错误信息
+      String userFriendlyError = '视频转换失败';
+      if (e.toString().contains('Source file does not exist')) {
+        userFriendlyError = '源文件不存在';
+      } else if (e.toString().contains('Source file is empty')) {
+        userFriendlyError = '源文件为空';
+      } else if (e.toString().contains('Source file is not readable')) {
+        userFriendlyError = '无法读取源文件，请检查权限';
+      } else if (e.toString().contains('Target directory is not writable')) {
+        userFriendlyError = '无法写入目标目录，请检查权限';
+      }
+
+      // 更新任务状态为失败
+      final failedTask = task.copyWith(
+        status: ConversionStatus.failed,
+        errorMessage: 'Error: $e',
+        updatedAt: DateTime.now(),
+      );
+
+      await _updateTask(failedTask);
+
+      // 通知用户转换失败
+      Utils.showSnackbar('转换失败', userFriendlyError, isError: true);
+
+      // 处理下一个任务
+      isConverting.value = false;
+      currentTask.value = null;
+      _currentTaskId = null;
       _processNextTask();
     }
   }
 
-  /// 构建FFmpeg命令
-  String _buildFFmpegCommand(ConversionTask task) {
+  /// 构建转换选项
+  Map<String, dynamic> _buildConversionOptions(ConversionTask task) {
     // 解析分辨率
     int width, height;
     switch (task.resolution) {
@@ -578,56 +692,112 @@ class VideoConverterService extends GetxService {
       default:
         width = 1280;
         height = 720;
+        break;
     }
 
-    // 构建命令
-    String command;
+    // 创建选项映射
+    final Map<String, dynamic> options = {
+      'width': width,
+      'height': height,
+      'videoBitrate': '${task.bitrate}k',
+      'audioBitrate': '128k',
+      'preset': 'medium',
+    };
 
-    // 根据格式选择不同的编码参数
-    if (task.format == 'mp3') {
-      // 如果是 MP3 格式，只提取音频
-      command =
-          '-i "${task.sourceFilePath}" -vn -c:a libmp3lame -q:a 2 "${task.targetFilePath}"';
-    } else if (task.format == 'mp4') {
-      // MP4 格式使用 H.264 编码
-      command =
-          '-i "${task.sourceFilePath}" -c:v libx264 -preset medium -b:v ${task.bitrate}k '
-          '-vf scale=$width:$height -c:a aac -b:a 128k -movflags +faststart "${task.targetFilePath}"';
-    } else if (task.format == 'webm') {
-      // WebM 格式使用 VP9 编码
-      command =
-          '-i "${task.sourceFilePath}" -c:v libvpx-vp9 -b:v ${task.bitrate}k '
-          '-vf scale=$width:$height -c:a libopus -b:a 128k "${task.targetFilePath}"';
-    } else {
-      // 其他格式使用通用的 H.264 编码
-      command =
-          '-i "${task.sourceFilePath}" -c:v libx264 -preset medium -b:v ${task.bitrate}k '
-          '-vf scale=$width:$height -c:a aac -b:a 128k "${task.targetFilePath}"';
+    // 根据格式设置不同的编码器
+    switch (task.format.toLowerCase()) {
+      case 'mp4':
+        options['videoCodec'] = 'libx264';
+        options['audioCodec'] = 'aac';
+        options['profile'] = 'high';
+        options['level'] = '4.0';
+        options['movflags'] = '+faststart';
+        options['metadata'] = {'title': 'Converted with TubeSavely'};
+        break;
+      case 'webm':
+        options['videoCodec'] = 'libvpx-vp9';
+        options['audioCodec'] = 'libopus';
+        options['deadline'] = 'good';
+        options['cpuUsed'] = 2;
+        options['audioSampleRate'] = 48000;
+        break;
+      case 'gif':
+        options['fps'] = 10;
+        options['loop'] = 0;
+        options['extractAudio'] = false;
+        break;
+      case 'mkv':
+        options['videoCodec'] = 'libx265';
+        options['audioCodec'] = 'aac';
+        options['crf'] = 23;
+        break;
+      case 'avi':
+        options['videoCodec'] = 'mpeg4';
+        options['audioCodec'] = 'libmp3lame';
+        options['quality'] = 5;
+        break;
+      case 'mov':
+        options['videoCodec'] = 'libx264';
+        options['audioCodec'] = 'aac';
+        options['profile'] = 'high';
+        break;
+      case 'ogg':
+        options['videoCodec'] = 'libtheora';
+        options['audioCodec'] = 'libvorbis';
+        options['videoQuality'] = 7;
+        options['audioQuality'] = 5;
+        break;
+      case 'mp3':
+        options['extractAudio'] = true;
+        options['audioCodec'] = 'libmp3lame';
+        options['audioQuality'] = 2;
+        options['audioSampleRate'] = 44100;
+        break;
+      case 'wav':
+        options['extractAudio'] = true;
+        options['audioCodec'] = 'pcm_s16le';
+        options['audioSampleRate'] = 44100;
+        break;
+      case 'aac':
+        options['extractAudio'] = true;
+        options['audioCodec'] = 'aac';
+        options['audioBitrate'] = '192k';
+        options['audioSampleRate'] = 44100;
+        break;
+      case 'flac':
+        options['extractAudio'] = true;
+        options['audioCodec'] = 'flac';
+        options['audioSampleRate'] = 44100;
+        break;
+      default:
+        options['videoCodec'] = 'libx264';
+        options['audioCodec'] = 'aac';
+        options['preset'] = 'medium';
+        break;
     }
 
-    // 添加错误检测和容错参数
-    command = '-hide_banner -err_detect ignore_err $command';
-
-    Logger.d('FFmpeg command: $command');
-    return command;
+    return options;
   }
 
   /// 获取视频时长（秒）
   Future<double> _getVideoDuration(String filePath) async {
     try {
-      // 使用FFprobe获取视频信息
-      MediaInformationSession session =
-          await FFprobeKit.getMediaInformation(filePath);
-      MediaInformation? mediaInformation = session.getMediaInformation();
+      // 使用视频处理服务获取媒体信息
+      final mediaInfo = await _videoProcessingService.getMediaInfo(filePath);
 
-      if (mediaInformation != null) {
-        String? durationStr = mediaInformation.getDuration();
-        if (durationStr != null && durationStr.isNotEmpty) {
-          return double.parse(durationStr);
+      if (mediaInfo != null && mediaInfo.containsKey('duration')) {
+        final durationStr = mediaInfo['duration'].toString();
+        if (durationStr.isNotEmpty) {
+          try {
+            return double.parse(durationStr);
+          } catch (e) {
+            Logger.e('Error parsing duration string: $durationStr, $e');
+          }
         }
       }
 
       // 如果无法获取时长，返回默认值
+      Logger.w('Could not determine media duration, using default value');
       return 60.0;
     } catch (e) {
       Logger.e('Error getting video duration: $e');

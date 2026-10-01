@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:tubesavely/app/data/models/payment_model.dart';
 import 'package:tubesavely/app/modules/payment/controllers/transaction_history_controller.dart';
+import 'package:tubesavely/app/routes/app_pages.dart';
 import 'package:tubesavely/app/theme/app_colors.dart';
 import 'package:tubesavely/app/theme/app_text_styles.dart';
 import 'package:tubesavely/app/utils/utils.dart';
@@ -68,7 +69,7 @@ class TransactionHistoryView extends GetView<TransactionHistoryController> {
           ElevatedButton(
             onPressed: () {
               // 传递initialTab参数，1表示积分充值标签页
-              Get.toNamed('/payment', arguments: {'initialTab': 1});
+              Get.toNamed(Routes.PAYMENT, arguments: {'initialTab': 1});
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
@@ -355,9 +356,8 @@ class TransactionHistoryView extends GetView<TransactionHistoryController> {
         return '支付宝';
       case PaymentMethod.wechatPay:
         return '微信支付';
-      default:
-        return '未知';
     }
+    return '未知';
   }
 
   /// 获取状态名称

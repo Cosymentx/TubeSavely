@@ -22,7 +22,7 @@ class PaymentController extends GetxController
 
   // 商品列表
   final RxList<ProductModel> membershipProducts = <ProductModel>[].obs;
-  final RxList<ProductModel> pointsProducts = <ProductModel>[].obs;
+  final RxList<ProductModel> creditsProducts = <ProductModel>[].obs;
 
   // 选中的商品
   final Rx<ProductModel?> selectedProduct = Rx<ProductModel?>(null);
@@ -94,19 +94,21 @@ class PaymentController extends GetxController
       final products = await _paymentRepository.getProducts();
 
       // 分类商品
-      membershipProducts.value = products
-          .where((product) => product.type == ProductType.membership)
-          .toList();
+      membershipProducts.value =
+          products
+              .where((product) => product.type == ProductType.membership)
+              .toList();
 
-      pointsProducts.value = products
-          .where((product) => product.type == ProductType.points)
-          .toList();
+      creditsProducts.value =
+          products
+              .where((product) => product.type == ProductType.credit)
+              .toList();
 
       // 默认选中第一个商品
       if (membershipProducts.isNotEmpty) {
         selectedProduct.value = membershipProducts.first;
-      } else if (pointsProducts.isNotEmpty) {
-        selectedProduct.value = pointsProducts.first;
+      } else if (creditsProducts.isNotEmpty) {
+        selectedProduct.value = creditsProducts.first;
       }
     } catch (e) {
       Logger.e('Error loading products: $e');
@@ -168,7 +170,7 @@ class PaymentController extends GetxController
         order = OrderModel(
           id: 'order_${DateTime.now().millisecondsSinceEpoch}',
           productId: selectedProduct.value!.id,
-          userId: userInfo.value?.id ?? 'user_123',
+          userId: userInfo.value?.id.toString() ?? 'user_123',
           amount: selectedProduct.value!.price,
           currency: selectedProduct.value!.currency,
           status: 'pending',
@@ -258,23 +260,21 @@ class PaymentController extends GetxController
 
             // 更新用户服务中的用户信息
             await _userService.mockUpdateUser(updatedUser);
-          } else if (order.productId.contains('points')) {
+          } else if (order.productId.contains('credits')) {
             // 积分商品
-            int points = 0;
+            int credits = 0;
             if (order.productId.contains('100')) {
-              points = 100;
+              credits = 100;
             } else if (order.productId.contains('300')) {
-              points = 330;
+              credits = 330;
             } else if (order.productId.contains('500')) {
-              points = 600;
+              credits = 600;
             } else if (order.productId.contains('1000')) {
-              points = 1300;
+              credits = 1300;
             }
 
             // 更新用户信息
-            final updatedUser = user.copyWith(
-              points: user.points + points,
-            );
+            final updatedUser = user.copyWith(credits: user.credits + credits);
 
             // 更新用户服务中的用户信息
             await _userService.mockUpdateUser(updatedUser);
@@ -290,27 +290,33 @@ class PaymentController extends GetxController
         await loadUserInfo();
 
         // 导航到支付结果页面
-        Get.toNamed('/payment-result', arguments: {
-          'isSuccess': true,
-          'order': order,
-        });
+        Get.toNamed(
+          '/payment-result',
+          arguments: {'isSuccess': true, 'order': order},
+        );
       } else {
         // 导航到支付结果页面
-        Get.toNamed('/payment-result', arguments: {
-          'isSuccess': false,
-          'order': order,
-          'errorMessage': '支付处理失败，请稍后重试',
-        });
+        Get.toNamed(
+          '/payment-result',
+          arguments: {
+            'isSuccess': false,
+            'order': order,
+            'errorMessage': '支付处理失败，请稍后重试',
+          },
+        );
       }
     } catch (e) {
       Logger.e('Error processing payment: $e');
 
       // 导航到支付结果页面
-      Get.toNamed('/payment-result', arguments: {
-        'isSuccess': false,
-        'order': order,
-        'errorMessage': '处理支付时出错: $e',
-      });
+      Get.toNamed(
+        '/payment-result',
+        arguments: {
+          'isSuccess': false,
+          'order': order,
+          'errorMessage': '处理支付时出错: $e',
+        },
+      );
     } finally {
       isLoading.value = false;
     }

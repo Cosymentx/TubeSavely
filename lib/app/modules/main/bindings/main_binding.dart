@@ -8,25 +8,30 @@ import '../../profile/controllers/profile_controller.dart';
 class MainBinding extends Bindings {
   @override
   void dependencies() {
-    Get.lazyPut<MainController>(
-      () => MainController(),
+    Get.put<MainController>(
+      MainController(),
+      permanent: true,
     );
 
     // 预先加载各个标签页的控制器
-    Get.lazyPut<HomeController>(
-      () => HomeController(),
+    Get.put<HomeController>(
+      HomeController(),
+      permanent: true,
     );
 
-    Get.lazyPut<HistoryController>(
-      () => HistoryController(),
+    Get.put<HistoryController>(
+      HistoryController(),
+      permanent: true,
     );
 
-    Get.lazyPut<TasksController>(
-      () => TasksController(),
+    Get.put<TasksController>(
+      TasksController(),
+      permanent: true,
     );
 
-    Get.lazyPut<ProfileController>(
-      () => ProfileController(),
+    Get.put<ProfileController>(
+      ProfileController(),
+      permanent: true,
     );
   }
 }

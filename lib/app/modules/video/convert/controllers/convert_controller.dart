@@ -11,8 +11,10 @@ import 'package:tubesavely/app/utils/logger.dart';
 import 'package:tubesavely/app/utils/utils.dart';
 
 class ConvertController extends GetxController {
-  final VideoConverterRepository _videoConverterRepository = Get.find<VideoConverterRepository>();
-  final VideoConverterService _videoConverterService = Get.find<VideoConverterService>();
+  final VideoConverterRepository _videoConverterRepository =
+      Get.find<VideoConverterRepository>();
+  final VideoConverterService _videoConverterService =
+      Get.find<VideoConverterService>();
 
   // 选择的视频文件
   final RxList<File> selectedFiles = <File>[].obs;
@@ -27,10 +29,23 @@ class ConvertController extends GetxController {
   final RxString selectedResolution = '720p'.obs;
 
   // 可用的格式
-  final List<String> availableFormats = ['mp4', 'mkv', 'avi', 'mov', 'webm', 'mp3'];
+  final List<String> availableFormats = [
+    'mp4',
+    'mkv',
+    'avi',
+    'mov',
+    'webm',
+    'mp3'
+  ];
 
   // 可用的分辨率
-  final List<String> availableResolutions = ['480p', '720p', '1080p', '2K', '4K'];
+  final List<String> availableResolutions = [
+    '480p',
+    '720p',
+    '1080p',
+    '2K',
+    '4K'
+  ];
 
   // 是否正在加载
   final RxBool isLoading = false.obs;
@@ -59,7 +74,10 @@ class ConvertController extends GetxController {
       );
 
       if (result != null && result.files.isNotEmpty) {
-        final files = result.files.where((file) => file.path != null).map((file) => File(file.path!)).toList();
+        final files = result.files
+            .where((file) => file.path != null)
+            .map((file) => File(file.path!))
+            .toList();
 
         if (files.isNotEmpty) {
           selectedFiles.addAll(files);
@@ -142,7 +160,8 @@ class ConvertController extends GetxController {
   // 取消转换任务
   Future<void> cancelTask(String taskId) async {
     try {
-      final success = await _videoConverterRepository.cancelConversionTask(taskId);
+      final success =
+          await _videoConverterRepository.cancelConversionTask(taskId);
       if (success) {
         Utils.showSnackbar('成功', '已取消转换任务');
       } else {
@@ -181,23 +200,28 @@ class ConvertController extends GetxController {
       if (await convertDir.exists()) {
         if (Platform.isAndroid) {
           // 在 Android 上使用 Storage Access Framework 打开文件夹
-          final List<ConversionTask> tasks = await _videoConverterRepository.getConversionTasks();
+          final List<ConversionTask> tasks =
+              _videoConverterRepository.getConversionTasks();
           if (tasks.isNotEmpty) {
             // 尝试打开最新转换文件的文件夹
-            final completedTasks = tasks.where((task) => task.status == ConversionStatus.completed).toList();
+            final completedTasks = tasks
+                .where((task) => task.status == ConversionStatus.completed)
+                .toList();
             if (completedTasks.isEmpty) {
               Utils.showSnackbar('提示', '没有已完成的转换任务');
               return;
             }
 
             final latestTask = completedTasks.reduce((a, b) =>
-              (a.updatedAt ?? DateTime.now()).isAfter(b.updatedAt ?? DateTime.now()) ? a : b);
+                (a.updatedAt ?? DateTime.now())
+                        .isAfter(b.updatedAt ?? DateTime.now())
+                    ? a
+                    : b);
 
             if (latestTask.targetFilePath.isNotEmpty) {
               final file = File(latestTask.targetFilePath);
               if (await file.exists()) {
                 // 打开文件所在的文件夹
-                final uri = Uri.file(file.path);
                 await OpenFile.open(file.path);
                 return;
               }
@@ -206,15 +230,19 @@ class ConvertController extends GetxController {
 
           // 如果没有文件或无法打开，显示提示
           Utils.showSnackbar('提示', '转换文件保存在: ${convertDir.path}');
-
         } else if (Platform.isIOS) {
           // 在 iOS 上使用文件共享打开最新转换的文件
-          final List<ConversionTask> tasks = await _videoConverterRepository.getConversionTasks();
+          final List<ConversionTask> tasks =
+              _videoConverterRepository.getConversionTasks();
           if (tasks.isNotEmpty) {
-            final completedTasks = tasks.where((task) => task.status == ConversionStatus.completed);
+            final completedTasks = tasks
+                .where((task) => task.status == ConversionStatus.completed);
             if (completedTasks.isNotEmpty) {
               final latestTask = completedTasks.reduce((a, b) =>
-                (a.updatedAt ?? DateTime.now()).isAfter(b.updatedAt ?? DateTime.now()) ? a : b);
+                  (a.updatedAt ?? DateTime.now())
+                          .isAfter(b.updatedAt ?? DateTime.now())
+                      ? a
+                      : b);
 
               if (latestTask.targetFilePath.isNotEmpty) {
                 final file = File(latestTask.targetFilePath);
@@ -227,7 +255,6 @@ class ConvertController extends GetxController {
           }
 
           Utils.showSnackbar('提示', '转换文件保存在: ${convertDir.path}');
-
         } else {
           // 在桌面平台上，我们可以直接打开文件夹
           await OpenFile.open(convertDir.path);
@@ -255,6 +282,60 @@ class ConvertController extends GetxController {
     } catch (e) {
       Logger.e('Error opening file: $e');
       Utils.showSnackbar('错误', '打开文件时出错: $e', isError: true);
+    }
+  }
+
+  // 打开文件所在位置
+  Future<void> openFileLocation(String filePath) async {
+    try {
+      final file = File(filePath);
+      if (await file.exists()) {
+        final directory = file.parent;
+
+        if (Platform.isAndroid || Platform.isIOS) {
+          // 移动平台上，显示文件路径
+          Utils.showSnackbar('文件位置', directory.path);
+
+          // 尝试打开文件管理器（可能不支持）
+          try {
+            await OpenFile.open(directory.path);
+          } catch (e) {
+            Logger.d('无法直接打开文件夹，这在移动平台上是正常的: $e');
+          }
+        } else {
+          // 桌面平台上，直接打开文件夹
+          await OpenFile.open(directory.path);
+        }
+      } else {
+        Utils.showSnackbar('错误', '文件不存在', isError: true);
+      }
+    } catch (e) {
+      Logger.e('Error opening file location: $e');
+      Utils.showSnackbar('错误', '打开文件位置时出错: $e', isError: true);
+    }
+  }
+
+  // 重试转换任务
+  Future<void> retryTask(ConversionTask task) async {
+    try {
+      // 先删除旧任务
+      await _videoConverterRepository.deleteConversionTask(task.id);
+
+      // 创建新任务
+      final newTask = await _videoConverterRepository.createConversionTask(
+        sourceFilePath: task.sourceFilePath,
+        format: task.format,
+        resolution: task.resolution,
+      );
+
+      if (newTask != null) {
+        Utils.showSnackbar('成功', '已重新添加到转换队列');
+      } else {
+        Utils.showSnackbar('错误', '重试转换任务失败', isError: true);
+      }
+    } catch (e) {
+      Logger.e('Error retrying conversion task: $e');
+      Utils.showSnackbar('错误', '重试转换任务时出错: $e', isError: true);
     }
   }
 }

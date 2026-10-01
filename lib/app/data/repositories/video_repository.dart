@@ -51,6 +51,59 @@ class VideoRepository {
     await _storageProvider.clearDownloadHistory();
   }
 
+  // 获取视频历史（从服务器）
+  Future<List<VideoModel>> getVideoHistory({
+    int offset = 1,
+    int limit = 20,
+  }) async {
+    try {
+      Logger.d('Getting video history from server');
+
+      final response = await _apiProvider.getVideoHistory(
+        offset: offset,
+        limit: limit,
+      );
+
+      if (response.status.isOk) {
+        final List<dynamic> data = response.body['data'] ?? [];
+        return data.map((item) => VideoModel.fromJson(item)).toList();
+      }
+
+      return [];
+    } catch (e) {
+      Logger.e('Error getting video history from server: $e');
+      return [];
+    }
+  }
+
+  // 创建视频
+  Future<bool> createVideo(VideoModel video) async {
+    try {
+      Logger.d('Creating video: ${video.title}');
+
+      final response = await _apiProvider.createVideo(video.toJson());
+
+      return response.status.isOk;
+    } catch (e) {
+      Logger.e('Error creating video: $e');
+      return false;
+    }
+  }
+
+  // 删除视频
+  Future<bool> deleteVideo(String id) async {
+    try {
+      Logger.d('Deleting video: $id');
+
+      final response = await _apiProvider.deleteVideo(int.parse(id));
+
+      return response.status.isOk;
+    } catch (e) {
+      Logger.e('Error deleting video: $e');
+      return false;
+    }
+  }
+
   // 获取支持的平台
   Future<List<Map<String, dynamic>>> getSupportedPlatforms() async {
     try {

@@ -49,47 +49,66 @@ class VideoPlayerService extends GetxService {
 
   /// 初始化服务
   Future<VideoPlayerService> init() async {
-    Logger.d('VideoPlayerService initialized');
+    Logger.d('VideoPlayerService initializing...');
 
-    // 创建播放器实例
-    _player = Player();
+    try {
+      // 创建播放器实例
+      _player = Player();
+      Logger.d('Player instance created');
 
-    // 监听播放状态
-    _player?.stream.playing.listen((playing) {
-      if (playing) {
-        status.value = PlayerStatus.playing;
-      } else {
-        if (status.value != PlayerStatus.error &&
-            status.value != PlayerStatus.completed) {
-          status.value = PlayerStatus.paused;
+      // 监听播放状态
+      _player?.stream.playing.listen((playing) {
+        Logger.d('Player playing state changed: $playing');
+        if (playing) {
+          status.value = PlayerStatus.playing;
+          Logger.d('Status set to playing');
+        } else {
+          if (status.value != PlayerStatus.error &&
+              status.value != PlayerStatus.completed) {
+            status.value = PlayerStatus.paused;
+            Logger.d('Status set to paused');
+          }
         }
-      }
-    });
+      });
 
-    // 监听播放位置
-    _player?.stream.position.listen((pos) {
-      position.value = pos.inMilliseconds / 1000;
-    });
+      // 监听播放位置
+      _player?.stream.position.listen((pos) {
+        position.value = pos.inMilliseconds / 1000;
+      });
 
-    // 监听视频总时长
-    _player?.stream.duration.listen((dur) {
-      duration.value = dur.inMilliseconds / 1000;
-    });
+      // 监听视频总时长
+      _player?.stream.duration.listen((dur) {
+        duration.value = dur.inMilliseconds / 1000;
+        Logger.d('Video duration updated: ${duration.value} seconds');
+      });
 
-    // 监听播放完成
-    _player?.stream.completed.listen((completed) {
-      if (completed) {
-        status.value = PlayerStatus.completed;
-      }
-    });
+      // 监听播放完成
+      _player?.stream.completed.listen((completed) {
+        Logger.d('Player completed: $completed');
+        if (completed) {
+          status.value = PlayerStatus.completed;
+          Logger.d('Status set to completed');
+        }
+      });
 
-    // 监听音量变化
-    _player?.stream.volume.listen((vol) {
-      volume.value = vol;
-      isMuted.value = vol == 0;
-    });
+      // 监听音量变化
+      _player?.stream.volume.listen((vol) {
+        volume.value = vol;
+        isMuted.value = vol == 0;
+      });
 
-    return this;
+      // 监听播放器错误
+      _player?.stream.error.listen((error) {
+        Logger.e('Player error: $error');
+        status.value = PlayerStatus.error;
+      });
+
+      Logger.d('VideoPlayerService initialized successfully');
+      return this;
+    } catch (e) {
+      Logger.e('Error initializing VideoPlayerService: $e');
+      rethrow;
+    }
   }
 
   /// 创建视频控制器
@@ -110,28 +129,68 @@ class VideoPlayerService extends GetxService {
   /// [video] 视频模型（可选）
   Future<void> play({required String url, VideoModel? video}) async {
     try {
+      Logger.d('VideoPlayerService.play called with URL: $url');
+
       if (_player == null) {
+        Logger.e('Player not initialized');
         throw Exception('Player not initialized');
       }
 
-      // 如果是同一个URL，则继续播放
-      if (url == currentUrl.value) {
+      // 检查URL是否是YouTube链接
+      bool isYouTubeUrl =
+          url.contains('youtube.com') || url.contains('youtu.be');
+
+      // 如果是同一个URL，但是是YouTube链接，我们需要重新加载
+      // 因为YouTube链接需要通过播放器解析为实际的视频流URL
+      if (url == currentUrl.value && !isYouTubeUrl) {
+        Logger.d(
+            'Same URL detected, but not a YouTube link, continuing playback');
         _player!.play();
         return;
+      } else if (url == currentUrl.value && isYouTubeUrl) {
+        Logger.d(
+            'Same YouTube URL detected, but we need to reload it to get the actual stream');
       }
 
       // 更新当前视频和URL
       currentVideo.value = video;
       currentUrl.value = url;
+      Logger.d('Updated current video and URL');
 
       // 设置状态为加载中
       status.value = PlayerStatus.loading;
+      Logger.d('Set status to loading');
+
+      // 停止任何当前播放
+      _player!.stop();
+      Logger.d('Stopped any current playback');
 
       // 打开媒体
-      await _player!.open(Media(url));
+      Logger.d('Opening media: $url');
+
+      // 对于YouTube链接，我们需要使用特殊的处理
+      if (isYouTubeUrl) {
+        Logger.d('Detected YouTube URL, using special handling');
+        // 对于YouTube链接，我们需要确保每次都重新加载
+        // 使用普通的Media构造函数，但确保每次都是新的实例
+        await _player!.open(Media(url));
+      } else {
+        // 对于其他链接，使用普通的Media构造函数
+        await _player!.open(Media(url));
+      }
+
+      Logger.d('Media opened successfully');
 
       // 开始播放
-      _player!.play();
+      Logger.d('Starting playback');
+      await _player!.play();
+      Logger.d('Playback started');
+
+      // 确保状态更新为播放中
+      if (status.value == PlayerStatus.loading) {
+        Logger.d('Manually updating status to playing');
+        status.value = PlayerStatus.playing;
+      }
     } catch (e) {
       Logger.e('Error playing video: $e');
       status.value = PlayerStatus.error;
@@ -188,14 +247,28 @@ class VideoPlayerService extends GetxService {
   }
 
   /// 停止播放
-  void stop() {
+  Future<void> stop() async {
     if (_player != null) {
-      _player!.stop();
-      status.value = PlayerStatus.idle;
-      position.value = 0;
-      duration.value = 0;
-      currentUrl.value = '';
-      currentVideo.value = null;
+      Logger.d('Stopping playback');
+      try {
+        // 先暂停播放
+        _player!.pause();
+        Logger.d('Playback paused');
+
+        // 然后停止播放
+        await _player!.stop();
+        Logger.d('Playback stopped');
+
+        // 重置状态
+        status.value = PlayerStatus.idle;
+        position.value = 0;
+        duration.value = 0;
+        currentUrl.value = '';
+        currentVideo.value = null;
+        Logger.d('Player state reset');
+      } catch (e) {
+        Logger.e('Error stopping playback: $e');
+      }
     }
   }
 

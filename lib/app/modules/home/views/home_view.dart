@@ -4,7 +4,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 
 import '../../../data/models/video_model.dart';
-import '../../../theme/app_theme.dart';
+import '../../../theme/app_colors.dart';
+import '../../../theme/app_text_styles.dart';
 import '../../../utils/utils.dart';
 import '../controllers/home_controller.dart';
 
@@ -14,32 +15,32 @@ class HomeView extends GetView<HomeController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(kToolbarHeight),
+        child: _buildAppBar(),
+      ),
       body: SafeArea(
+        // 顶部不需要额外的安全区域，因为已经有AppBar了
+        top: false,
         child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildAppBar(),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildUrlInput(),
-                    SizedBox(height: 24.h),
-                    _buildQuickActions(),
-                    SizedBox(height: 24.h),
-                    _buildTrendingVideos(),
-                    SizedBox(height: 24.h),
-                    _buildDownloadOptions(),
-                    SizedBox(height: 24.h),
-                    _buildSupportedPlatforms(),
-                    SizedBox(height: 24.h),
-                    _buildVideoTools(),
-                  ],
-                ),
-              ),
-            ],
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildUrlInput(),
+                SizedBox(height: 24.h),
+                _buildQuickActions(),
+                SizedBox(height: 24.h),
+                _buildTrendingVideos(),
+                SizedBox(height: 24.h),
+                _buildDownloadOptions(),
+                SizedBox(height: 24.h),
+                _buildSupportedPlatforms(),
+                SizedBox(height: 24.h),
+                _buildVideoTools(),
+              ],
+            ),
           ),
         ),
       ),
@@ -61,7 +62,7 @@ class HomeView extends GetView<HomeController> {
           ),
         ],
         border: Border.all(
-          color: AppTheme.primaryColor.withAlpha(26),
+          color: AppColors.primary.withAlpha(26),
           width: 1,
         ),
       ),
@@ -72,7 +73,7 @@ class HomeView extends GetView<HomeController> {
             children: [
               Icon(
                 Icons.build_circle,
-                color: AppTheme.primaryColor,
+                color: AppColors.primary,
                 size: 20.sp,
               ),
               SizedBox(width: 8.w),
@@ -82,10 +83,10 @@ class HomeView extends GetView<HomeController> {
                   fontSize: 16.sp,
                   fontWeight: FontWeight.bold,
                   foreground: Paint()
-                    ..shader = const LinearGradient(
+                    ..shader = LinearGradient(
                       colors: [
-                        AppTheme.primaryColor,
-                        AppTheme.accentColor,
+                        AppColors.primary,
+                        AppColors.accent,
                       ],
                     ).createShader(Rect.fromLTWH(0, 0, 120.w, 24.h)),
                 ),
@@ -134,7 +135,7 @@ class HomeView extends GetView<HomeController> {
           color: Get.theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(12.r),
           border: Border.all(
-            color: AppTheme.primaryColor.withAlpha(26),
+            color: AppColors.primary.withAlpha(26),
             width: 1,
           ),
         ),
@@ -144,12 +145,12 @@ class HomeView extends GetView<HomeController> {
             Container(
               padding: EdgeInsets.all(8.w),
               decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withOpacity(0.1),
+                color: AppColors.primary.withAlpha(25),
                 borderRadius: BorderRadius.circular(8.r),
               ),
               child: Icon(
                 icon,
-                color: AppTheme.primaryColor,
+                color: AppColors.primary,
                 size: 24.sp,
               ),
             ),
@@ -166,7 +167,7 @@ class HomeView extends GetView<HomeController> {
               subtitle,
               style: TextStyle(
                 fontSize: 12.sp,
-                color: Get.theme.colorScheme.onSurface.withOpacity(0.6),
+                color: AppColors.textSecondary,
               ),
             ),
           ],
@@ -177,62 +178,45 @@ class HomeView extends GetView<HomeController> {
 
   // 顶部导航栏
   Widget _buildAppBar() {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-      decoration: BoxDecoration(
-        color: Get.theme.colorScheme.surface,
-        // boxShadow: [
-        //   BoxShadow(
-        //     color: Colors.black.withAlpha(13),
-        //     blurRadius: 10,
-        //     offset: const Offset(0, 2),
-        //   ),
-        // ],
+    return AppBar(
+      elevation: 0,
+      backgroundColor: Get.theme.colorScheme.surface,
+      titleSpacing: 16.w,
+      title: Text(
+        'TubeSavely',
+        style: AppTextStyles.titleLarge.copyWith(
+          foreground: Paint()
+            ..shader = LinearGradient(
+              colors: [
+                AppColors.primary,
+                AppColors.accent,
+              ],
+            ).createShader(Rect.fromLTWH(0, 0, 200.w, 70.h)),
+        ),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            'TubeSavely',
-            style: TextStyle(
-              fontSize: 20.sp,
-              fontWeight: FontWeight.bold,
-              foreground: Paint()
-                ..shader = LinearGradient(
-                  colors: [
-                    AppTheme.primaryColor,
-                    AppTheme.accentColor,
-                  ],
-                ).createShader(Rect.fromLTWH(0, 0, 200.w, 70.h)),
-            ),
-          ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                icon: Icon(Icons.history, size: 22.sp),
-                onPressed: () => Get.toNamed('/history'),
-                padding: EdgeInsets.all(8.w),
-                constraints: const BoxConstraints(),
-              ),
-              SizedBox(width: 4.w),
-              IconButton(
-                icon: Icon(Icons.download, size: 22.sp),
-                onPressed: () => Get.toNamed('/tasks'),
-                padding: EdgeInsets.all(8.w),
-                constraints: const BoxConstraints(),
-              ),
-              SizedBox(width: 4.w),
-              IconButton(
-                icon: Icon(Icons.settings, size: 22.sp),
-                onPressed: () => Get.toNamed('/settings'),
-                padding: EdgeInsets.all(8.w),
-                constraints: const BoxConstraints(),
-              ),
-            ],
-          ),
-        ],
-      ),
+      actions: [
+        IconButton(
+          icon: Icon(Icons.history, size: 22.sp),
+          onPressed: () => Get.toNamed('/history'),
+          padding: EdgeInsets.all(8.w),
+          constraints: const BoxConstraints(),
+        ),
+        SizedBox(width: 4.w),
+        IconButton(
+          icon: Icon(Icons.download, size: 22.sp),
+          onPressed: () => Get.toNamed('/tasks'),
+          padding: EdgeInsets.all(8.w),
+          constraints: const BoxConstraints(),
+        ),
+        SizedBox(width: 4.w),
+        IconButton(
+          icon: Icon(Icons.settings, size: 22.sp),
+          onPressed: () => Get.toNamed('/settings'),
+          padding: EdgeInsets.all(8.w),
+          constraints: const BoxConstraints(),
+        ),
+        SizedBox(width: 8.w),
+      ],
     );
   }
 
@@ -244,7 +228,7 @@ class HomeView extends GetView<HomeController> {
           borderRadius: BorderRadius.circular(16.r),
           boxShadow: [
             BoxShadow(
-              color: AppTheme.primaryColor.withAlpha(26),
+              color: AppColors.primary.withAlpha(26),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -255,7 +239,7 @@ class HomeView extends GetView<HomeController> {
           decoration: InputDecoration(
             hintText: '输入视频链接...',
             hintStyle: TextStyle(
-              color: Colors.grey,
+              color: AppColors.textSecondary,
               fontSize: 14.sp,
             ),
             border: OutlineInputBorder(
@@ -273,14 +257,14 @@ class HomeView extends GetView<HomeController> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    AppTheme.primaryColor,
-                    AppTheme.accentColor,
+                    AppColors.primary,
+                    AppColors.accent,
                   ],
                 ),
                 borderRadius: BorderRadius.circular(12.r),
                 boxShadow: [
                   BoxShadow(
-                    color: AppTheme.primaryColor.withAlpha(77),
+                    color: AppColors.primary.withAlpha(77),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -290,14 +274,15 @@ class HomeView extends GetView<HomeController> {
                   ? Padding(
                       padding: EdgeInsets.all(8.w),
                       child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        valueColor:
+                            AlwaysStoppedAnimation<Color>(AppColors.onPrimary),
                         strokeWidth: 2.w,
                       ),
                     )
                   : IconButton(
                       icon: Icon(
                         Icons.download,
-                        color: Colors.white,
+                        color: AppColors.onPrimary,
                         size: 20.sp,
                       ),
                       onPressed: controller.parseVideo,
@@ -348,7 +333,7 @@ class HomeView extends GetView<HomeController> {
             icon: Icons.monetization_on,
             title: '充值积分',
             subtitle: '畅享下载体验',
-            onTap: () => controller.goToPoints(),
+            onTap: () => controller.goToCredits(),
           ),
         ),
       ],
@@ -443,7 +428,7 @@ class HomeView extends GetView<HomeController> {
             ),
           ],
           border: Border.all(
-            color: AppTheme.primaryColor.withAlpha(26),
+            color: AppColors.primary.withAlpha(26),
             width: 1,
           ),
         ),
@@ -454,7 +439,7 @@ class HomeView extends GetView<HomeController> {
               children: [
                 Icon(
                   Icons.tune,
-                  color: AppTheme.primaryColor,
+                  color: AppColors.primary,
                   size: 20.sp,
                 ),
                 SizedBox(width: 8.w),
@@ -464,10 +449,10 @@ class HomeView extends GetView<HomeController> {
                     fontSize: 16.sp,
                     fontWeight: FontWeight.bold,
                     foreground: Paint()
-                      ..shader = const LinearGradient(
+                      ..shader = LinearGradient(
                         colors: [
-                          AppTheme.primaryColor,
-                          AppTheme.accentColor,
+                          AppColors.primary,
+                          AppColors.accent,
                         ],
                       ).createShader(Rect.fromLTWH(0, 0, 120.w, 24.h)),
                   ),
@@ -513,14 +498,14 @@ class HomeView extends GetView<HomeController> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12.r),
                   ),
-                  backgroundColor: AppTheme.primaryColor,
+                  backgroundColor: AppColors.primary,
                 ),
                 child: Text(
                   '开始下载',
                   style: TextStyle(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: AppColors.onPrimary,
                   ),
                 ),
               ),
@@ -552,7 +537,7 @@ class HomeView extends GetView<HomeController> {
                 height: 60.h,
                 fit: BoxFit.cover,
                 placeholder: (context, url) => Container(
-                  color: Colors.grey[300],
+                  color: AppColors.surfaceVariant,
                   child: Center(
                     child: CircularProgressIndicator(
                       strokeWidth: 2.w,
@@ -560,10 +545,10 @@ class HomeView extends GetView<HomeController> {
                   ),
                 ),
                 errorWidget: (context, url, error) => Container(
-                  color: Colors.grey[300],
+                  color: AppColors.surfaceVariant,
                   child: Icon(
                     Icons.error,
-                    color: Colors.grey[500],
+                    color: AppColors.textSecondary,
                   ),
                 ),
               ),
@@ -573,12 +558,12 @@ class HomeView extends GetView<HomeController> {
               width: 80.w,
               height: 60.h,
               decoration: BoxDecoration(
-                color: Colors.grey[300],
+                color: AppColors.surfaceVariant,
                 borderRadius: BorderRadius.circular(8.r),
               ),
               child: Icon(
                 Icons.video_library,
-                color: Colors.grey[500],
+                color: AppColors.textSecondary,
               ),
             ),
           SizedBox(width: 12.w),
@@ -603,7 +588,7 @@ class HomeView extends GetView<HomeController> {
                     '来源: ${video.platform}',
                     style: TextStyle(
                       fontSize: 12.sp,
-                      color: Get.theme.colorScheme.onSurface.withAlpha(179),
+                      color: AppColors.textSecondary,
                     ),
                   ),
                 if (video.duration != null)
@@ -611,7 +596,7 @@ class HomeView extends GetView<HomeController> {
                     '时长: ${video.duration! ~/ 60}:${(video.duration! % 60).toString().padLeft(2, '0')}',
                     style: TextStyle(
                       fontSize: 12.sp,
-                      color: Get.theme.colorScheme.onSurface.withAlpha(179),
+                      color: AppColors.textSecondary,
                     ),
                   ),
               ],
@@ -687,10 +672,10 @@ class HomeView extends GetView<HomeController> {
         ),
         decoration: BoxDecoration(
           gradient: isSelected
-              ? const LinearGradient(
+              ? LinearGradient(
                   colors: [
-                    AppTheme.primaryColor,
-                    AppTheme.accentColor,
+                    AppColors.primary,
+                    AppColors.accent,
                   ],
                 )
               : null,
@@ -699,12 +684,12 @@ class HomeView extends GetView<HomeController> {
           border: isSelected
               ? null
               : Border.all(
-                  color: Get.theme.colorScheme.onSurface.withOpacity(0.1),
+                  color: AppColors.border,
                 ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: AppTheme.primaryColor.withOpacity(0.3),
+                    color: AppColors.primary.withAlpha(76),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -716,7 +701,7 @@ class HomeView extends GetView<HomeController> {
           style: TextStyle(
             fontSize: 14.sp,
             fontWeight: FontWeight.w500,
-            color: isSelected ? Colors.white : Get.theme.colorScheme.onSurface,
+            color: isSelected ? AppColors.onPrimary : AppColors.textPrimary,
           ),
         ),
       ),
@@ -737,13 +722,13 @@ class HomeView extends GetView<HomeController> {
           borderRadius: BorderRadius.circular(16.r),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withAlpha(13), // 0.05 透明度
+              color: AppColors.shadow,
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
           ],
           border: Border.all(
-            color: AppTheme.primaryColor.withAlpha(26), // 0.1 透明度
+            color: AppColors.primary.withAlpha(26),
             width: 1,
           ),
         ),
@@ -757,7 +742,7 @@ class HomeView extends GetView<HomeController> {
                   children: [
                     Icon(
                       Icons.trending_up,
-                      color: AppTheme.primaryColor,
+                      color: AppColors.primary,
                       size: 20.sp,
                     ),
                     SizedBox(width: 8.w),
@@ -767,10 +752,10 @@ class HomeView extends GetView<HomeController> {
                         fontSize: 16.sp,
                         fontWeight: FontWeight.bold,
                         foreground: Paint()
-                          ..shader = const LinearGradient(
+                          ..shader = LinearGradient(
                             colors: [
-                              AppTheme.primaryColor,
-                              AppTheme.accentColor,
+                              AppColors.primary,
+                              AppColors.accent,
                             ],
                           ).createShader(Rect.fromLTWH(0, 0, 120.w, 24.h)),
                       ),
@@ -785,7 +770,7 @@ class HomeView extends GetView<HomeController> {
                     '查看更多',
                     style: TextStyle(
                       fontSize: 12.sp,
-                      color: AppTheme.primaryColor,
+                      color: AppColors.primary,
                     ),
                   ),
                 ),
@@ -809,7 +794,7 @@ class HomeView extends GetView<HomeController> {
                         borderRadius: BorderRadius.circular(12.r),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withAlpha(13), // 0.05 透明度
+                            color: AppColors.shadow,
                             blurRadius: 6,
                             offset: const Offset(0, 2),
                           ),
@@ -832,17 +817,17 @@ class HomeView extends GetView<HomeController> {
                                   height: 90.h,
                                   fit: BoxFit.cover,
                                   placeholder: (context, url) => Container(
-                                    color: Colors.grey[300],
+                                    color: AppColors.surfaceVariant,
                                     child: const Center(
                                       child: CircularProgressIndicator(),
                                     ),
                                   ),
                                   errorWidget: (context, url, error) =>
                                       Container(
-                                    color: Colors.grey[300],
-                                    child: const Icon(
+                                    color: AppColors.surfaceVariant,
+                                    child: Icon(
                                       Icons.error,
-                                      color: Colors.grey,
+                                      color: AppColors.textSecondary,
                                     ),
                                   ),
                                 ),
@@ -857,15 +842,14 @@ class HomeView extends GetView<HomeController> {
                                         vertical: 2.h,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: Colors.black
-                                            .withAlpha(179), // 0.7 透明度
+                                        color: Colors.black.withAlpha(179),
                                         borderRadius:
                                             BorderRadius.circular(4.r),
                                       ),
                                       child: Text(
                                         '${video.duration! ~/ 60}:${(video.duration! % 60).toString().padLeft(2, '0')}',
                                         style: TextStyle(
-                                          color: Colors.white,
+                                          color: AppColors.onPrimary,
                                           fontSize: 10.sp,
                                           fontWeight: FontWeight.w500,
                                         ),
@@ -895,8 +879,7 @@ class HomeView extends GetView<HomeController> {
                                   video.author ?? '未知作者',
                                   style: TextStyle(
                                     fontSize: 10.sp,
-                                    color: Get.theme.colorScheme.onSurface
-                                        .withAlpha(179), // 0.7 透明度
+                                    color: AppColors.textSecondary,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -907,15 +890,14 @@ class HomeView extends GetView<HomeController> {
                                     Icon(
                                       Icons.play_arrow,
                                       size: 12.sp,
-                                      color: AppTheme.primaryColor,
+                                      color: AppColors.primary,
                                     ),
                                     SizedBox(width: 2.w),
                                     Text(
                                       '${(index + 1) * 1000 + 500}次播放',
                                       style: TextStyle(
                                         fontSize: 10.sp,
-                                        color: Get.theme.colorScheme.onSurface
-                                            .withAlpha(179), // 0.7 透明度
+                                        color: AppColors.textSecondary,
                                       ),
                                     ),
                                   ],
@@ -956,7 +938,7 @@ class HomeView extends GetView<HomeController> {
             ),
           ],
           border: Border.all(
-            color: AppTheme.primaryColor.withAlpha(26), // 0.1 透明度
+            color: AppColors.primary.withAlpha(26),
             width: 1,
           ),
         ),
@@ -967,7 +949,7 @@ class HomeView extends GetView<HomeController> {
               children: [
                 Icon(
                   Icons.language,
-                  color: AppTheme.primaryColor,
+                  color: AppColors.primary,
                   size: 20.sp,
                 ),
                 SizedBox(width: 8.w),
@@ -979,8 +961,8 @@ class HomeView extends GetView<HomeController> {
                     foreground: Paint()
                       ..shader = LinearGradient(
                         colors: [
-                          AppTheme.primaryColor,
-                          AppTheme.accentColor,
+                          AppColors.primary,
+                          AppColors.accent,
                         ],
                       ).createShader(Rect.fromLTWH(0, 0, 120.w, 24.h)),
                   ),
@@ -1026,28 +1008,35 @@ class HomeView extends GetView<HomeController> {
             color: Get.theme.colorScheme.surface,
             borderRadius: BorderRadius.circular(12.r),
             border: Border.all(
-              color: AppTheme.primaryColor.withAlpha(26), // 0.1 透明度
+              color: AppColors.primary.withAlpha(26),
               width: 1,
             ),
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12.r),
-            child: CachedNetworkImage(
-              imageUrl: icon,
-              width: 30.w,
-              height: 30.w,
-              fit: BoxFit.contain,
-              placeholder: (context, url) => Center(
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.w,
-                ),
-              ),
-              errorWidget: (context, url, error) => Icon(
-                Icons.language,
-                color: Colors.grey[500],
-                size: 30.sp,
-              ),
-            ),
+            child: icon.startsWith('http')
+                ? CachedNetworkImage(
+                    imageUrl: icon,
+                    width: 30.w,
+                    height: 30.w,
+                    fit: BoxFit.contain,
+                    placeholder: (context, url) => Center(
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.w,
+                      ),
+                    ),
+                    errorWidget: (context, url, error) => Icon(
+                      Icons.language,
+                      color: Colors.grey[500],
+                      size: 30.sp,
+                    ),
+                  )
+                : Image.asset(
+                    icon,
+                    width: 30.w,
+                    height: 30.w,
+                    fit: BoxFit.contain,
+                  ),
           ),
         ),
         SizedBox(height: 4.h),

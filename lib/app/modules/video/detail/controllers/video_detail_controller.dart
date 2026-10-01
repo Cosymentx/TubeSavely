@@ -7,6 +7,7 @@ import 'package:tubesavely/app/data/models/video_model.dart';
 import 'package:tubesavely/app/data/repositories/download_repository.dart';
 import 'package:tubesavely/app/data/repositories/video_player_repository.dart';
 import 'package:tubesavely/app/data/repositories/video_repository.dart';
+import 'package:tubesavely/app/services/video_parser_service.dart';
 import 'package:tubesavely/app/services/video_player_service.dart';
 import 'package:tubesavely/app/utils/utils.dart';
 
@@ -188,36 +189,183 @@ class VideoDetailController extends GetxController {
 
   // 播放视频
   Future<void> playVideo() async {
-    if (video.value == null) return;
+    if (video.value == null) {
+      Logger.e('无法播放视频：视频信息为空');
+      return;
+    }
 
     try {
-      // 获取最高质量的视频URL
+      Logger.d('开始播放视频: ${video.value!.title}');
+
+      // 获取直接可播放的视频URL（不是YouTube页面URL）
       String videoUrl = '';
-      if (video.value!.qualities.isNotEmpty) {
-        videoUrl = video.value!.qualities.first.url;
-      } else if (video.value!.formats.isNotEmpty) {
-        videoUrl = video.value!.formats.first.url;
-      } else {
+
+      // 检查是否有直接可播放的格式
+      if (video.value!.formats.isNotEmpty) {
+        // 查找直接可播放的格式（不是YouTube页面URL）
+        for (var format in video.value!.formats) {
+          if (format.url.contains('.mp4') ||
+              format.url.contains('.m3u8') ||
+              format.url.contains('.webm') ||
+              !format.url.contains('youtube.com/watch')) {
+            videoUrl = format.url;
+            Logger.d('找到直接可播放的格式URL: $videoUrl');
+            break;
+          }
+        }
+
+        // 如果没有找到直接可播放的格式，使用第一个格式
+        if (videoUrl.isEmpty && video.value!.formats.isNotEmpty) {
+          videoUrl = video.value!.formats.first.url;
+          Logger.d('使用格式列表中的第一个URL: $videoUrl');
+        }
+      }
+      // 检查是否有直接可播放的质量
+      else if (video.value!.qualities.isNotEmpty) {
+        // 查找直接可播放的质量（不是YouTube页面URL）
+        for (var quality in video.value!.qualities) {
+          if (quality.url.contains('.mp4') ||
+              quality.url.contains('.m3u8') ||
+              quality.url.contains('.webm') ||
+              !quality.url.contains('youtube.com/watch')) {
+            videoUrl = quality.url;
+            Logger.d('找到直接可播放的质量URL: $videoUrl');
+            break;
+          }
+        }
+
+        // 如果没有找到直接可播放的质量，使用第一个质量
+        if (videoUrl.isEmpty && video.value!.qualities.isNotEmpty) {
+          videoUrl = video.value!.qualities.first.url;
+          Logger.d('使用质量列表中的第一个URL: $videoUrl');
+        }
+      }
+      // 使用默认URL
+      else {
         videoUrl = video.value!.url;
+        Logger.d('使用视频默认URL: $videoUrl');
       }
 
       // 直接在当前页面播放视频
       if (videoUrl.isNotEmpty) {
-        if (isPlaying.value) {
-          // 如果已经在播放，则停止当前播放
-          _videoPlayerRepository.stopVideo();
+        Logger.d('视频URL有效，准备播放');
+
+        // 无论如何，先停止当前播放
+        Logger.d('停止当前播放');
+        await _videoPlayerRepository.stopVideo();
+
+        // 等待一小段时间，确保播放器已经停止
+        await Future.delayed(const Duration(milliseconds: 500));
+
+        // 检查URL是否是YouTube页面URL
+        if (videoUrl.contains('youtube.com/watch') ||
+            videoUrl.contains('youtu.be')) {
+          Logger.d('检测到YouTube URL，需要先解析实际的流URL');
+
+          try {
+            // 显示加载中提示
+            Utils.showSnackbar('提示', '正在解析视频流，请稍候...');
+
+            // 使用视频解析服务重新解析视频，获取实际的流URL
+            final videoParserService = Get.find<VideoParserService>();
+            final parsedVideo = await videoParserService.parseVideo(videoUrl);
+
+            if (parsedVideo != null) {
+              // 查找最佳的直接流URL
+              String? directStreamUrl;
+
+              // 首先检查是否有直接的流URL
+              if (parsedVideo.formats.isNotEmpty) {
+                // 查找MP4或M3U8格式的直接流URL
+                for (var format in parsedVideo.formats) {
+                  if ((format.url.contains('.mp4') ||
+                          format.url.contains('.m3u8') ||
+                          format.url.contains('.webm')) &&
+                      !format.url.contains('youtube.com/watch')) {
+                    directStreamUrl = format.url;
+                    Logger.d('找到直接可播放的格式URL: $directStreamUrl');
+                    break;
+                  }
+                }
+
+                // 如果没有找到直接可播放的格式，但有格式列表，使用第一个
+                if (directStreamUrl == null &&
+                    parsedVideo.formats.isNotEmpty &&
+                    !parsedVideo.formats.first.url
+                        .contains('youtube.com/watch')) {
+                  directStreamUrl = parsedVideo.formats.first.url;
+                  Logger.d('使用格式列表中的第一个URL: $directStreamUrl');
+                }
+              }
+
+              // 如果在格式中没有找到，检查质量列表
+              if (directStreamUrl == null && parsedVideo.qualities.isNotEmpty) {
+                // 查找MP4或M3U8格式的直接流URL
+                for (var quality in parsedVideo.qualities) {
+                  if ((quality.url.contains('.mp4') ||
+                          quality.url.contains('.m3u8') ||
+                          quality.url.contains('.webm')) &&
+                      !quality.url.contains('youtube.com/watch')) {
+                    directStreamUrl = quality.url;
+                    Logger.d('找到直接可播放的质量URL: $directStreamUrl');
+                    break;
+                  }
+                }
+
+                // 如果没有找到直接可播放的质量，但有质量列表，使用第一个
+                if (directStreamUrl == null &&
+                    parsedVideo.qualities.isNotEmpty &&
+                    !parsedVideo.qualities.first.url
+                        .contains('youtube.com/watch')) {
+                  directStreamUrl = parsedVideo.qualities.first.url;
+                  Logger.d('使用质量列表中的第一个URL: $directStreamUrl');
+                }
+              }
+
+              // 如果找到了直接流URL，使用它
+              if (directStreamUrl != null) {
+                videoUrl = directStreamUrl;
+                Logger.d('成功解析到实际的流URL: $videoUrl');
+              } else {
+                Logger.e('无法解析YouTube视频的实际流URL');
+                Utils.showSnackbar('错误', '无法解析YouTube视频的实际流URL', isError: true);
+                return;
+              }
+            } else {
+              Logger.e('解析视频失败，返回结果为空');
+              Utils.showSnackbar('错误', '解析视频失败，返回结果为空', isError: true);
+              return;
+            }
+          } catch (e) {
+            Logger.e('解析YouTube视频流时出错: $e');
+            Utils.showSnackbar('错误', '解析YouTube视频流时出错', isError: true);
+            return;
+          }
         }
 
         // 开始播放新视频
+        Logger.d('开始播放新视频: $videoUrl');
         await _videoPlayerRepository.playVideo(
             url: videoUrl, video: video.value);
+
+        Logger.d('视频播放请求已发送，设置播放状态为true');
         isPlaying.value = true;
+
+        // 添加视频到下载历史（作为播放历史使用）
+        try {
+          await _videoRepository.addToDownloadHistory(video.value!);
+          Logger.d('视频已添加到历史记录');
+        } catch (historyError) {
+          Logger.e('添加到历史记录时出错: $historyError');
+        }
       } else {
+        Logger.e('无法播放视频：未找到有效的视频链接');
         Utils.showSnackbar('错误', '无法播放视频，未找到有效的视频链接', isError: true);
       }
     } catch (e) {
       Logger.e('播放视频时出错: $e');
       Utils.showSnackbar('错误', '播放视频时出错: $e', isError: true);
+      isPlaying.value = false;
     }
   }
 

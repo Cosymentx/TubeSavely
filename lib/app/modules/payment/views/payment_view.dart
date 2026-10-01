@@ -38,7 +38,7 @@ class PaymentView extends GetView<PaymentController> {
               controller: controller.tabController,
               children: [
                 _buildMembershipTab(),
-                _buildPointsTab(),
+                _buildCreditsTab(),
               ],
             ),
           ),
@@ -74,7 +74,7 @@ class PaymentView extends GetView<PaymentController> {
                   radius: 30.r,
                   backgroundColor: AppColors.primary.withOpacity(0.1),
                   child: Text(
-                    user?.name?.substring(0, 1).toUpperCase() ?? '?',
+                    user?.username?.substring(0, 1).toUpperCase() ?? '?',
                     style: TextStyle(
                       fontSize: 24.sp,
                       fontWeight: FontWeight.bold,
@@ -88,7 +88,7 @@ class PaymentView extends GetView<PaymentController> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        user?.name ?? '未登录',
+                        user?.username ?? '未登录',
                         style: AppTextStyles.titleMedium,
                       ),
                       SizedBox(height: 4.h),
@@ -117,7 +117,7 @@ class PaymentView extends GetView<PaymentController> {
                 ),
                 _buildUserInfoItem(
                   '积分',
-                  '${user?.points ?? 0}',
+                  '${user?.credits ?? 0}',
                   Colors.orange,
                 ),
               ],
@@ -201,13 +201,13 @@ class PaymentView extends GetView<PaymentController> {
   }
 
   /// 构建积分标签页
-  Widget _buildPointsTab() {
+  Widget _buildCreditsTab() {
     return Obx(() {
       if (controller.isLoading.value) {
         return const Center(child: CircularProgressIndicator());
       }
 
-      if (controller.pointsProducts.isEmpty) {
+      if (controller.creditsProducts.isEmpty) {
         return Center(
           child: Text(
             '暂无积分套餐',
@@ -218,9 +218,9 @@ class PaymentView extends GetView<PaymentController> {
 
       return ListView.builder(
         padding: EdgeInsets.all(16.r),
-        itemCount: controller.pointsProducts.length,
+        itemCount: controller.creditsProducts.length,
         itemBuilder: (context, index) {
-          final product = controller.pointsProducts[index];
+          final product = controller.creditsProducts[index];
           return _buildProductItem(product);
         },
       );
@@ -383,13 +383,13 @@ class PaymentView extends GetView<PaymentController> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 图标
-              // Image.asset(
-              //   iconPath,
-              //   width: 24.w,
-              //   height: 24.h,
-              // ),
-              // SizedBox(width: 8.w),
+              // 使用图标代替图片资源
+              Icon(
+                _getPaymentIcon(method),
+                size: 24.sp,
+                color: isSelected ? AppColors.primary : Colors.grey,
+              ),
+              SizedBox(width: 8.w),
               Text(
                 name,
                 style: TextStyle(
@@ -403,5 +403,21 @@ class PaymentView extends GetView<PaymentController> {
         ),
       );
     });
+  }
+
+  /// 获取支付方式对应的图标
+  IconData _getPaymentIcon(PaymentMethod method) {
+    switch (method) {
+      case PaymentMethod.applePay:
+        return Icons.apple;
+      case PaymentMethod.googlePay:
+        return Icons.g_mobiledata;
+      case PaymentMethod.stripe:
+        return Icons.credit_card;
+      case PaymentMethod.alipay:
+        return Icons.account_balance_wallet;
+      case PaymentMethod.wechatPay:
+        return Icons.chat_bubble;
+    }
   }
 }

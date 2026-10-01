@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:lottie/lottie.dart';
 import 'package:tubesavely/app/data/models/payment_model.dart';
+import 'package:tubesavely/app/routes/app_pages.dart';
 import 'package:tubesavely/app/theme/app_colors.dart';
 import 'package:tubesavely/app/theme/app_text_styles.dart';
 import 'package:tubesavely/app/utils/utils.dart';
@@ -179,7 +179,7 @@ class PaymentResultView extends StatelessWidget {
           child: ElevatedButton(
             onPressed: () {
               // 返回首页
-              Get.offAllNamed('/main');
+              Get.offAllNamed(Routes.MAIN);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
@@ -213,14 +213,15 @@ class PaymentResultView extends StatelessWidget {
                 int initialTab = 0; // 默认显示会员标签页
                 if (order != null) {
                   // 如果是积分商品，显示积分标签页
-                  if (order.productId.toLowerCase().contains('point') ||
+                  if (order.productId.toLowerCase().contains('credit') ||
                       order.productId.toLowerCase().contains('积分')) {
                     initialTab = 1;
                   }
                 }
 
                 // 返回到支付页面
-                Get.offNamed('/payment', arguments: {'initialTab': initialTab});
+                Get.offNamed(Routes.PAYMENT,
+                    arguments: {'initialTab': initialTab});
               },
               style: OutlinedButton.styleFrom(
                 padding: EdgeInsets.symmetric(vertical: 12.h),
@@ -256,9 +257,8 @@ class PaymentResultView extends StatelessWidget {
         return '支付宝';
       case PaymentMethod.wechatPay:
         return '微信支付';
-      default:
-        return '未知';
     }
+    return '未知';
   }
 
   /// 获取状态名称
