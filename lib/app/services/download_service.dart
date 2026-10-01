@@ -7,6 +7,8 @@ import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:tubesavely/app/data/models/download_task_model.dart';
 import 'package:tubesavely/app/data/models/video_model.dart';
+import '../data/providers/storage_provider.dart';
+import 'media_download_request.dart';
 
 class DownloadService extends GetxService {
   final RxList<DownloadTaskModel> tasks = <DownloadTaskModel>[].obs;
@@ -24,7 +26,8 @@ class DownloadService extends GetxService {
           );
         } else if (update is TaskProgressUpdate) {
           tasks[index] = existingTask.copyWith(
-            downloadedBytes: (update.expectedFileSize * update.progress).toInt(),
+            downloadedBytes:
+                (update.expectedFileSize * update.progress).toInt(),
             totalBytes: update.expectedFileSize,
           );
         }
@@ -53,7 +56,8 @@ class DownloadService extends GetxService {
     }
   }
 
-  Future<String> getDefaultDownloadPath() async => (await getApplicationCacheDirectory()).path;
+  Future<String> getDefaultDownloadPath() async =>
+      (await getApplicationCacheDirectory()).path;
 
   Future<DownloadTaskModel?> enqueueNewTask(
     VideoModel video, {
@@ -118,16 +122,21 @@ class DownloadService extends GetxService {
         downloadDirectory = savePath ?? await getDefaultDownloadPath();
       }
 
+      final mediaRequest = MediaDownloadRequest.forVideo(
+          video, Get.find<StorageProvider>().getUserToken(),
+          quality: quality, format: format);
       final DownloadTask bgTask = DownloadTask(
         taskId: taskId,
-        url: downloadUrl,
+        url: mediaRequest.url,
+        headers: mediaRequest.headers,
+        post: mediaRequest.body,
         filename: fileName,
         directory: downloadDirectory,
         baseDirectory: BaseDirectory.applicationDocuments,
         updates: Updates.statusAndProgress,
         requiresWiFi: false, // This should come from settings
         retries: 3,
-        allowPause: true,
+        allowPause: mediaRequest.method == 'GET',
         metaData: taskId,
       );
 

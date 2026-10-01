@@ -19,6 +19,7 @@ class PaymentResultView extends StatelessWidget {
     // 获取参数
     final Map<String, dynamic> args = Get.arguments ?? {};
     final bool isSuccess = args['isSuccess'] ?? false;
+    final bool isPending = args['isPending'] ?? false;
     final OrderModel? order = args['order'];
     final String? errorMessage = args['errorMessage'];
 
@@ -44,15 +45,20 @@ class PaymentResultView extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // 动画
-              _buildAnimation(isSuccess),
+              isPending
+                  ? const Icon(Icons.hourglass_top,
+                      size: 80, color: Colors.orange)
+                  : _buildAnimation(isSuccess),
               SizedBox(height: 24.h),
               // 标题
               Text(
-                isSuccess ? '支付成功' : '支付失败',
+                isPending ? '等待支付确认' : (isSuccess ? '支付成功' : '支付失败'),
                 style: TextStyle(
                   fontSize: 24.sp,
                   fontWeight: FontWeight.bold,
-                  color: isSuccess ? Colors.green : Colors.red,
+                  color: isPending
+                      ? Colors.orange
+                      : (isSuccess ? Colors.green : Colors.red),
                 ),
               ),
               SizedBox(height: 16.h),
@@ -260,6 +266,8 @@ class PaymentResultView extends StatelessWidget {
         return 'Google Pay';
       case PaymentMethod.stripe:
         return 'Stripe';
+      case PaymentMethod.creem:
+        return 'Creem';
       case PaymentMethod.alipay:
         return '支付宝';
       case PaymentMethod.wechatPay:

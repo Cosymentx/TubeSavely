@@ -1,3 +1,7 @@
+int? _number(dynamic value) => value is num
+    ? value.toInt()
+    : num.tryParse(value?.toString() ?? '')?.toInt();
+
 class VideoModel {
   final String? id;
   final String title;
@@ -26,25 +30,42 @@ class VideoModel {
   });
 
   factory VideoModel.fromJson(Map<String, dynamic> json) {
+    final formats = (json['formats'] as List? ?? [])
+        .whereType<Map>()
+        .map((entry) => VideoFormat.fromJson(Map<String, dynamic>.from(entry)))
+        .toList();
+    final rawQualities = json['qualities'] as List?;
+    final qualities = rawQualities != null
+        ? rawQualities
+            .whereType<Map>()
+            .map((entry) =>
+                VideoQuality.fromJson(Map<String, dynamic>.from(entry)))
+            .toList()
+        : formats
+            .where((format) => format.url.isNotEmpty && format.vcodec != 'none')
+            .map((format) => VideoQuality(
+                  label: format.height != null && format.width != null
+                      ? '${format.height! < format.width! ? format.height : format.width}p'
+                      : 'Original',
+                  height: format.height ?? 0,
+                  width: format.width ?? 0,
+                  bitrate: ((format.tbr ?? 0) * 1000).round(),
+                  url: format.url,
+                ))
+            .toList();
     return VideoModel(
-      id: json['id'],
+      id: (json['id'] ?? json['video_id'])?.toString(),
       title: json['title'] ?? '',
-      url: json['url'] ?? '',
+      url: json['url'] ?? json['original_url'] ?? '',
       thumbnail: json['thumbnail'],
       platform: json['platform'],
       author: json['author'],
       authorUrl: json['author_url'],
-      duration: json['duration'],
-      qualities: json['qualities'] != null
-          ? List<VideoQuality>.from(
-              json['qualities'].map((x) => VideoQuality.fromJson(x)))
-          : [],
-      formats: json['formats'] != null
-          ? List<VideoFormat>.from(
-              json['formats'].map((x) => VideoFormat.fromJson(x)))
-          : [],
+      duration: _number(json['duration']),
+      qualities: qualities,
+      formats: formats,
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
+          ? DateTime.tryParse(json['created_at'].toString())
           : null,
     );
   }
@@ -119,9 +140,9 @@ class VideoQuality {
   factory VideoQuality.fromJson(Map<String, dynamic> json) {
     return VideoQuality(
       label: json['label'] ?? '',
-      height: json['height'] ?? 0,
-      width: json['width'] ?? 0,
-      bitrate: json['bitrate'] ?? 0,
+      height: _number(json['height']) ?? 0,
+      width: _number(json['width']) ?? 0,
+      bitrate: _number(json['bitrate']) ?? 0,
       url: json['url'] ?? '',
     );
   }
@@ -142,20 +163,40 @@ class VideoFormat {
   final String mimeType;
   final String url;
   final int? fileSize;
+  final String? formatId;
+  final int? width;
+  final int? height;
+  final String? vcodec;
+  final String? acodec;
+  final double? tbr;
 
   VideoFormat({
     required this.label,
     required this.mimeType,
     required this.url,
     this.fileSize,
+    this.formatId,
+    this.width,
+    this.height,
+    this.vcodec,
+    this.acodec,
+    this.tbr,
   });
 
   factory VideoFormat.fromJson(Map<String, dynamic> json) {
     return VideoFormat(
-      label: json['label'] ?? '',
-      mimeType: json['mime_type'] ?? '',
+      label: json['label'] ?? json['ext'] ?? '',
+      mimeType: json['mime_type'] ??
+          (json['ext'] != null ? 'video/${json['ext']}' : ''),
       url: json['url'] ?? '',
-      fileSize: json['file_size'],
+      fileSize: _number(
+          json['file_size'] ?? json['filesize'] ?? json['filesize_approx']),
+      formatId: json['format_id']?.toString(),
+      width: _number(json['width']),
+      height: _number(json['height']),
+      vcodec: json['vcodec'],
+      acodec: json['acodec'],
+      tbr: num.tryParse(json['tbr']?.toString() ?? '')?.toDouble(),
     );
   }
 
@@ -165,6 +206,12 @@ class VideoFormat {
       'mime_type': mimeType,
       'url': url,
       'file_size': fileSize,
+      'format_id': formatId,
+      'width': width,
+      'height': height,
+      'vcodec': vcodec,
+      'acodec': acodec,
+      'tbr': tbr,
     };
   }
 

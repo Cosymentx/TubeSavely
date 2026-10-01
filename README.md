@@ -104,3 +104,11 @@ flutter build windows --release    # Windows Release 绿色包
 ## 📄 开源协议
 
 Copyright © 2023-2026 TubeSavely. All rights reserved.
+
+### Python API 数据与支付
+
+登录后优先通过 Python 后端解析，兼容字符串秒数、数值历史 ID，以及 `format_id`、`ext`、分辨率和文件大小字段。下载后端解析的格式时使用 Bearer Token 和 `/api/v1/videos/download`，不会重新解析或重复扣分；本地直链继续使用普通 GET 下载。
+
+积分套餐、价格和可用支付渠道从后端获取。Stripe、Creem 和支付宝使用后端返回的收银台链接，支付成功以服务器确认的订单状态为准，等待中的订单显示为待确认。客户端不使用模拟套餐、模拟订单或本地增加余额。
+
+验证命令：`flutter test`、`flutter analyze --no-fatal-infos --no-fatal-warnings lib/ test/`、`flutter build apk --debug`、`flutter build macos --debug`。

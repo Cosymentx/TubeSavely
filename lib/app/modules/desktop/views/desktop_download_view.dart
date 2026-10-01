@@ -11,6 +11,7 @@ import '../../../data/providers/api_provider.dart';
 import '../../../data/providers/storage_provider.dart';
 import '../../../data/repositories/video_repository.dart';
 import '../../../services/download_service.dart';
+import '../../../services/media_download_request.dart';
 import '../../../utils/logger.dart';
 import '../../../utils/utils.dart';
 
@@ -82,9 +83,9 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
 
       // 优先调用 VideoRepository 进行解析（本地解析器优先，后端 API 回退）
       final video = await _videoRepository.parseVideo(url).timeout(
-        const Duration(seconds: 12),
-        onTimeout: () => null,
-      );
+            const Duration(seconds: 12),
+            onTimeout: () => null,
+          );
 
       if (video != null) {
         setState(() {
@@ -96,7 +97,9 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
       } else {
         // 本地降级：直接以 URL 作为单任务加入列表
         final rawTitle = url.split('?').first.split('/').last.trim();
-        final fallbackTitle = rawTitle.isNotEmpty ? rawTitle : 'Video_${DateTime.now().millisecondsSinceEpoch}';
+        final fallbackTitle = rawTitle.isNotEmpty
+            ? rawTitle
+            : 'Video_${DateTime.now().millisecondsSinceEpoch}';
         setState(() {
           _items.add(DesktopDownloadItem(
             video: VideoModel(
@@ -128,7 +131,9 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
     if (clean.length > 80) {
       clean = clean.substring(0, 80).trim();
     }
-    return clean.isEmpty ? 'Video_${DateTime.now().millisecondsSinceEpoch}' : clean;
+    return clean.isEmpty
+        ? 'Video_${DateTime.now().millisecondsSinceEpoch}'
+        : clean;
   }
 
   Future<String?> _getYtDlpPath() async {
@@ -150,12 +155,20 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
     return null;
   }
 
-  Future<void> _downloadViaHttp(String downloadUrl, String targetPath, DesktopDownloadItem item) async {
+  Future<void> _downloadViaHttp(
+      String downloadUrl, String targetPath, DesktopDownloadItem item,
+      {MediaDownloadRequest? mediaRequest}) async {
     final client = http.Client();
     try {
-      final request = http.Request('GET', Uri.parse(downloadUrl));
+      final request = http.Request(mediaRequest?.method ?? 'GET',
+          Uri.parse(mediaRequest?.url ?? downloadUrl));
       request.headers['User-Agent'] =
           'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+      if (mediaRequest != null) {
+        request.headers.addAll(mediaRequest.headers);
+        if (mediaRequest.body != null)
+          request.body = jsonEncode(mediaRequest.body);
+      }
       final response = await client.send(request);
 
       if (response.statusCode >= 400) {
@@ -163,7 +176,7 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
       }
 
       final contentType = response.headers['content-type'] ?? '';
-      if (contentType.contains('text/html')) {
+      if (contentType.contains('text/') || contentType.contains('json')) {
         throw Exception('URL returned HTML webpage, not a direct media file');
       }
 
@@ -173,7 +186,7 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
       final sink = file.openWrite();
       DateTime lastUpdate = DateTime.now();
 
-      await response.stream.listen((chunk) {
+      await for (final chunk in response.stream) {
         sink.add(chunk);
         received += chunk.length;
         final now = DateTime.now();
@@ -186,10 +199,11 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
             });
           }
         }
-      }).asFuture();
+      }
 
       await sink.flush();
       await sink.close();
+      if (received == 0) throw StateError('The downloaded media file is empty');
 
       if (mounted) {
         setState(() {
@@ -230,6 +244,23 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
       item.localPath = targetPath;
     });
 
+    final mediaRequest = MediaDownloadRequest.forVideo(
+        item.video, _storage.getUserToken(),
+        format: 'mp4');
+    if (mediaRequest.method == 'POST') {
+      try {
+        await _downloadViaHttp(mediaRequest.url, targetPath, item,
+            mediaRequest: mediaRequest);
+      } catch (error) {
+        if (mounted)
+          setState(() {
+            item.isDownloading = false;
+            item.statusText = 'status_failed'.tr;
+          });
+        Utils.showSnackbar('error'.tr, '视频下载失败，请重新解析后重试。');
+      }
+      return;
+    }
     final ytDlpPath = await _getYtDlpPath();
     final isDirectMedia = item.video.url.toLowerCase().endsWith('.mp4') ||
         item.video.url.toLowerCase().endsWith('.mov') ||
@@ -247,19 +278,26 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
         attemptArgsList.add([
           '--newline',
           '--no-part',
-          '--cookies-from-browser', 'chrome',
-          '-f', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
-          '--merge-output-format', 'mp4',
-          '-o', targetPath,
+          '--cookies-from-browser',
+          'chrome',
+          '-f',
+          'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+          '--merge-output-format',
+          'mp4',
+          '-o',
+          targetPath,
           item.video.url,
         ]);
       }
       attemptArgsList.add([
         '--newline',
         '--no-part',
-        '-f', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
-        '--merge-output-format', 'mp4',
-        '-o', targetPath,
+        '-f',
+        'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+        '--merge-output-format',
+        'mp4',
+        '-o',
+        targetPath,
         item.video.url,
       ]);
 
@@ -270,21 +308,25 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
           DateTime lastSetState = DateTime.now();
 
           process.stdout.transform(utf8.decoder).listen((line) {
-            final pctMatch = RegExp(r'\[download\]\s+([\d\.]+)%').firstMatch(line);
-            final speedMatch = RegExp(r'at\s+([^\s]+(?:KiB|MiB|GiB|B)/s)').firstMatch(line);
+            final pctMatch =
+                RegExp(r'\[download\]\s+([\d\.]+)%').firstMatch(line);
+            final speedMatch =
+                RegExp(r'at\s+([^\s]+(?:KiB|MiB|GiB|B)/s)').firstMatch(line);
             final etaMatch = RegExp(r'ETA\s+([\d:]+)').firstMatch(line);
 
             if (pctMatch != null) {
               final pct = double.tryParse(pctMatch.group(1) ?? '0') ?? 0.0;
               final now = DateTime.now();
-              if (now.difference(lastSetState).inMilliseconds >= 250 || pct >= 100.0) {
+              if (now.difference(lastSetState).inMilliseconds >= 250 ||
+                  pct >= 100.0) {
                 lastSetState = now;
                 if (mounted) {
                   setState(() {
                     item.progress = (pct / 100.0).clamp(0.0, 1.0);
                     String info = '${pct.toStringAsFixed(1)}%';
                     if (speedMatch != null) info += ' | ${speedMatch.group(1)}';
-                    if (etaMatch != null) info += ' | ETA: ${etaMatch.group(1)}';
+                    if (etaMatch != null)
+                      info += ' | ETA: ${etaMatch.group(1)}';
                     item.statusText = info;
                   });
                 }
@@ -346,7 +388,9 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
         return;
       }
     }
-    final dir = filePath != null ? File(filePath).parent.path : _storage.getDownloadPath();
+    final dir = filePath != null
+        ? File(filePath).parent.path
+        : _storage.getDownloadPath();
     if (Platform.isMacOS) {
       await Process.run('open', [dir]);
     } else if (Platform.isWindows) {
@@ -373,31 +417,42 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
               OutlinedButton(
                 style: OutlinedButton.styleFrom(
                   side: BorderSide(color: primaryColor, width: 0.8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(50)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                 ),
                 onPressed: _isParsing ? null : _pasteAndParseLink,
                 child: _isParsing
                     ? SizedBox(
                         width: 14,
                         height: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: primaryColor),
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: primaryColor),
                       )
                     : Text(
                         'parse_link'.tr,
-                        style: TextStyle(color: primaryColor, fontSize: 13, fontWeight: FontWeight.w500),
+                        style: TextStyle(
+                            color: primaryColor,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500),
                       ),
               ),
               OutlinedButton(
                 style: OutlinedButton.styleFrom(
                   side: BorderSide(color: primaryColor, width: 0.8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(50)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                 ),
                 onPressed: _downloadAll,
                 child: Text(
                   'download_now'.tr,
-                  style: TextStyle(color: primaryColor, fontSize: 13, fontWeight: FontWeight.w500),
+                  style: TextStyle(
+                      color: primaryColor,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500),
                 ),
               ),
             ],
@@ -410,7 +465,8 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
               width: double.infinity,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: theme.dividerColor.withOpacity(0.4), width: 0.8),
+                border: Border.all(
+                    color: theme.dividerColor.withOpacity(0.4), width: 0.8),
               ),
               child: _items.isEmpty
                   ? Center(
@@ -427,7 +483,9 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
                       itemCount: _items.length,
                       itemBuilder: (context, index) {
                         final item = _items[index];
-                        return _buildDownloadItemCard(item, key: ValueKey('${item.video.url}_${item.video.id}'));
+                        return _buildDownloadItemCard(item,
+                            key:
+                                ValueKey('${item.video.url}_${item.video.id}'));
                       },
                     ),
             ),
@@ -467,14 +525,16 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
             child: SizedBox(
               width: 130,
               height: 94,
-              child: item.video.thumbnail != null && item.video.thumbnail!.isNotEmpty
+              child: item.video.thumbnail != null &&
+                      item.video.thumbnail!.isNotEmpty
                   ? CachedNetworkImage(
                       imageUrl: item.video.thumbnail!,
                       fit: BoxFit.cover,
                       placeholder: (context, url) => Container(
                         color: theme.dividerColor.withOpacity(0.1),
                         child: Center(
-                          child: CircularProgressIndicator(strokeWidth: 2, color: primaryColor),
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: primaryColor),
                         ),
                       ),
                       errorWidget: (context, url, err) => Image.asset(
@@ -505,7 +565,9 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    item.video.title.isNotEmpty ? item.video.title : 'video.mp4',
+                    item.video.title.isNotEmpty
+                        ? item.video.title
+                        : 'video.mp4',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -532,7 +594,8 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
                             value: item.progress,
                             minHeight: 2.5,
                             backgroundColor: primaryColor.withOpacity(0.15),
-                            valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(primaryColor),
                           ),
                         ),
                       ),
@@ -561,7 +624,9 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
                 splashRadius: 22,
                 tooltip: item.isDownloading ? 'downloading'.tr : 'download'.tr,
                 icon: Icon(
-                  item.isDownloading ? Icons.hourglass_top : Icons.file_download_outlined,
+                  item.isDownloading
+                      ? Icons.hourglass_top
+                      : Icons.file_download_outlined,
                   color: primaryColor,
                 ),
                 onPressed: () => _startDownload(item),

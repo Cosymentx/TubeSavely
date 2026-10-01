@@ -89,7 +89,15 @@ class PaymentRepository {
       final response = await _apiProvider.getOrderStatus(orderId);
 
       if (response.status.isOk && response.body != null) {
-        return OrderModel.fromJson(response.body);
+        final body = response.body;
+        if (body is Map && body['code'] == 200 && body['data'] is Map) {
+          final previous = _paymentService.currentOrder.value;
+          return OrderModel.fromJson({
+            if (previous?.id == orderId) ...previous!.toJson(),
+            ...Map<String, dynamic>.from(body['data']),
+            'order_id': orderId,
+          });
+        }
       }
 
       return null;
@@ -105,7 +113,10 @@ class PaymentRepository {
   Future<bool> verifyPayment(Map<String, dynamic> data) async {
     try {
       final response = await _apiProvider.verifyPayment(data);
-      return response.status.isOk;
+      return response.status.isOk &&
+          response.body is Map &&
+          response.body['code'] == 200 &&
+          response.body['data']?['status'] == 'completed';
     } catch (e) {
       Logger.e('Error verifying payment: $e');
       return false;
@@ -128,14 +139,15 @@ class PaymentRepository {
 
       if (response.status.isOk && response.body != null) {
         final data = response.body['data'];
-        if (data != null && data is List) {
-          final List<OrderModel> transactions = data
+        if (data is Map && data['records'] is List) {
+          final records = data['records'] as List;
+          final List<OrderModel> transactions = records
               .map((item) => OrderModel.fromJson(item))
               .toList()
               .cast<OrderModel>();
 
           // 获取总数
-          final total = response.body['total'] ?? transactions.length;
+          final total = data['total'] ?? transactions.length;
           final hasMore = offset + transactions.length < total;
 
           return TransactionResult(
