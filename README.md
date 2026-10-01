@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/images/ic_logo.png" width="96" height="96" alt="TubeSavely Logo"/>
+<img src="assets/images/ic_logo.png" width="96" alt="TubeSavely Logo"/>
 
 # TubeSavely
 
