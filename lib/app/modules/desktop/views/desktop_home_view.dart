@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../widgets/desktop_dialog_wrapper.dart';
 import 'desktop_about_dialog.dart';
+import 'desktop_compress_view.dart';
 import 'desktop_convert_view.dart';
 import 'desktop_download_view.dart';
 import 'desktop_setting_dialog.dart';
@@ -11,6 +12,7 @@ import 'desktop_setting_dialog.dart';
 enum DesktopTabType {
   download,
   convert,
+  compress,
 }
 
 /// 桌面端主框架页面（完全兼容原生桌面端布局，对应用户截图）
@@ -103,7 +105,7 @@ class _DesktopHomeViewState extends State<DesktopHomeView> {
                     ],
                   ),
 
-                  // 中间胶囊切换器（下载 / 转换）
+                  // 中间胶囊切换器（下载 / 转换 / 压缩）
                   Center(
                     child: Container(
                       height: 36,
@@ -119,19 +121,22 @@ class _DesktopHomeViewState extends State<DesktopHomeView> {
                             // 下载 Tab
                             InkWell(
                               onTap: () => _switchTab(DesktopTabType.download),
-                              child: Container(
-                                width: 72,
-                                height: 36,
-                                alignment: Alignment.center,
-                                color: _currentTab == DesktopTabType.download
-                                    ? primaryColor
-                                    : Colors.transparent,
-                                child: Icon(
-                                  Icons.file_download_outlined,
-                                  size: 20,
+                              child: Tooltip(
+                                message: 'download'.tr,
+                                child: Container(
+                                  width: 68,
+                                  height: 36,
+                                  alignment: Alignment.center,
                                   color: _currentTab == DesktopTabType.download
-                                      ? Colors.white
-                                      : primaryColor,
+                                      ? primaryColor
+                                      : Colors.transparent,
+                                  child: Icon(
+                                    Icons.file_download_outlined,
+                                    size: 20,
+                                    color: _currentTab == DesktopTabType.download
+                                        ? Colors.white
+                                        : primaryColor,
+                                  ),
                                 ),
                               ),
                             ),
@@ -139,19 +144,45 @@ class _DesktopHomeViewState extends State<DesktopHomeView> {
                             // 转换 Tab
                             InkWell(
                               onTap: () => _switchTab(DesktopTabType.convert),
-                              child: Container(
-                                width: 72,
-                                height: 36,
-                                alignment: Alignment.center,
-                                color: _currentTab == DesktopTabType.convert
-                                    ? primaryColor
-                                    : Colors.transparent,
-                                child: Icon(
-                                  Icons.cached_outlined,
-                                  size: 20,
+                              child: Tooltip(
+                                message: 'convert'.tr,
+                                child: Container(
+                                  width: 68,
+                                  height: 36,
+                                  alignment: Alignment.center,
                                   color: _currentTab == DesktopTabType.convert
-                                      ? Colors.white
-                                      : primaryColor,
+                                      ? primaryColor
+                                      : Colors.transparent,
+                                  child: Icon(
+                                    Icons.cached_outlined,
+                                    size: 20,
+                                    color: _currentTab == DesktopTabType.convert
+                                        ? Colors.white
+                                        : primaryColor,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Container(width: 0.8, color: primaryColor),
+                            // 压缩 Tab
+                            InkWell(
+                              onTap: () => _switchTab(DesktopTabType.compress),
+                              child: Tooltip(
+                                message: 'compress'.tr,
+                                child: Container(
+                                  width: 68,
+                                  height: 36,
+                                  alignment: Alignment.center,
+                                  color: _currentTab == DesktopTabType.compress
+                                      ? primaryColor
+                                      : Colors.transparent,
+                                  child: Icon(
+                                    Icons.compress,
+                                    size: 20,
+                                    color: _currentTab == DesktopTabType.compress
+                                        ? Colors.white
+                                        : primaryColor,
+                                  ),
                                 ),
                               ),
                             ),
@@ -211,6 +242,7 @@ class _DesktopHomeViewState extends State<DesktopHomeView> {
                   children: const [
                     DesktopDownloadView(),
                     DesktopConvertView(),
+                    DesktopCompressView(),
                   ],
                 ),
               ),

@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tubesavely/app/data/models/video_compress_model.dart';
 import 'package:tubesavely/app/services/video_processing/ffmpeg_command_builder.dart';
+import 'package:tubesavely/app/translations/app_translations.dart';
 
 void main() {
   group('Video Compress Model Tests', () {
@@ -89,6 +90,27 @@ void main() {
       expect(args.contains('-b:v'), true);
       expect(args.contains('-c:a'), true);
       expect(args.contains('128k'), true);
+    });
+  });
+
+  group('Compression Translations Tests', () {
+    test('AppTranslations covers all 4 languages with compression keys', () {
+      final translations = AppTranslations();
+      final keys = translations.keys;
+
+      for (final lang in ['zh_CN', 'en_US', 'ja_JP', 'ko_KR']) {
+        final map = keys[lang]!;
+        expect(map.containsKey('compress'), isTrue);
+        expect(map.containsKey('start_compress'), isTrue);
+        expect(map.containsKey('compress_preset'), isTrue);
+        expect(map.containsKey('preset_quick'), isTrue);
+        expect(map.containsKey('preset_normal'), isTrue);
+        expect(map.containsKey('preset_extreme'), isTrue);
+        expect(map.containsKey('original_size'), isTrue);
+        expect(map.containsKey('target_size'), isTrue);
+        expect(map.containsKey('saved_size'), isTrue);
+        expect(map.containsKey('clear_completed'), isTrue);
+      }
     });
   });
 }

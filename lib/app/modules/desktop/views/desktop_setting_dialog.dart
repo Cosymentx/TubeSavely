@@ -6,8 +6,6 @@ import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../data/providers/storage_provider.dart';
-import '../../../theme/app_colors.dart';
-import '../../../theme/app_theme.dart';
 import '../widgets/desktop_dialog_wrapper.dart';
 import 'desktop_about_dialog.dart';
 
