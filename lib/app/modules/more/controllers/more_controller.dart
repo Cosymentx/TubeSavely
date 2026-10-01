@@ -6,6 +6,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart' as url_launcher;
 
 import '../../../data/providers/storage_provider.dart';
+import '../../../utils/constants.dart';
 import '../../../utils/logger.dart';
 import '../../../utils/utils.dart';
 
@@ -21,9 +22,9 @@ class MoreController extends GetxController {
   // 开发者信息
   final String developerName = 'TubeSavely Team';
   final String developerEmail = 'support@tubesavely.com';
-  final String websiteUrl = 'https://tubesavely-vue.vercel.app/';
-  final String privacyPolicyUrl = 'https://tubesavely-vue.vercel.app/privacy';
-  final String termsOfServiceUrl = 'https://tubesavely-vue.vercel.app/terms';
+  final String websiteUrl = Constants.WEB_URL;
+  final String privacyPolicyUrl = 'https://tubesavely.vercel.app/privacy';
+  final String termsOfServiceUrl = 'https://tubesavely.vercel.app/terms';
 
   // 社交媒体链接
   final String githubUrl = 'https://github.com/tubesavely';
