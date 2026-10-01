@@ -108,12 +108,21 @@ class HomeView extends GetView<HomeController> {
                   onTap: () => Get.toNamed('/convert'),
                 ),
               ),
-              SizedBox(width: 16.w),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: _buildToolCard(
+                  icon: Icons.compress,
+                  title: '视频压缩',
+                  subtitle: '智能批量瘦身',
+                  onTap: () => Get.toNamed('/compress'),
+                ),
+              ),
+              SizedBox(width: 12.w),
               Expanded(
                 child: _buildToolCard(
                   icon: Icons.video_settings,
                   title: '视频编辑',
-                  subtitle: '剪辑、合并视频',
+                  subtitle: '剪辑、合并',
                   onTap: () => Utils.showSnackbar('提示', '该功能即将上线，敬请期待'),
                 ),
               ),

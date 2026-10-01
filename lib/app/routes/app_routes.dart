@@ -22,6 +22,7 @@ abstract class Routes {
   static const API_TEST = _Paths.API_TEST;
   static const TASK = _Paths.TASK;
   static const CREDIT = _Paths.CREDIT;
+  static const COMPRESS = _Paths.COMPRESS;
 }
 
 abstract class _Paths {
@@ -46,4 +47,5 @@ abstract class _Paths {
   static const API_TEST = '/api-test';
   static const TASK = '/task';
   static const CREDIT = '/credit';
+  static const COMPRESS = '/compress';
 }

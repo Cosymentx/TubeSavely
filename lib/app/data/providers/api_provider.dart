@@ -143,8 +143,8 @@ class ApiProvider extends GetConnect {
   ///
   /// [url] 视频链接
   Future<Response<dynamic>> parseVideo(String url) {
-    Logger.d('Parsing video: $url');
-    return get('/api/v1/videos/parse', query: {'url': url});
+    Logger.d('Parsing video from ${Constants.PARSE_API_BASE_URL}: $url');
+    return httpClient.get('${Constants.PARSE_API_BASE_URL}/parse', query: {'url': url});
   }
 
   /// 获取视频信息

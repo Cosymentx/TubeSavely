@@ -3,6 +3,7 @@ class Constants {
 
   // API
   static const String API_BASE_URL = 'https://api.tubesavely.cosyment.com';
+  static const String PARSE_API_BASE_URL = 'https://tube-savely-server.vercel.app';
   static const int API_TIMEOUT = 30000; // 30秒
   static const int API_RETRY_COUNT = 3;
 

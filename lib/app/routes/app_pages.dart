@@ -35,6 +35,8 @@ import '../modules/tasks/bindings/tasks_binding.dart';
 import '../modules/tasks/views/tasks_view.dart';
 import '../modules/video/convert/bindings/convert_binding.dart';
 import '../modules/video/convert/views/convert_view.dart';
+import '../modules/video/compress/bindings/compress_binding.dart';
+import '../modules/video/compress/views/compress_view.dart';
 import '../modules/video/detail/bindings/video_detail_binding.dart';
 import '../modules/video/detail/views/video_detail_view.dart';
 import '../modules/video/player/bindings/video_player_binding.dart';
@@ -147,6 +149,11 @@ class AppPages {
       name: _Paths.CREDIT,
       page: () => const CreditView(),
       binding: CreditBinding(),
+    ),
+    GetPage(
+      name: _Paths.COMPRESS,
+      page: () => const CompressView(),
+      binding: CompressBinding(),
     ),
   ];
 }

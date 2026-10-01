@@ -21,6 +21,7 @@ import 'payment_service.dart';
 import 'stripe_service.dart';
 import 'apple_payment_service.dart';
 import 'video_converter_service.dart';
+import 'video_compress_service.dart';
 import 'video_player_service.dart';
 import 'user_service.dart';
 
@@ -66,6 +67,9 @@ Future<void> initServices() async {
   // 初始化并注册视频转换服务
   final videoConverterService = await VideoConverterService().init();
   Get.put(videoConverterService, permanent: true);
+
+  // 注册视频压缩服务
+  Get.put(VideoCompressService(), permanent: true);
 
   // 初始化并注册视频播放服务
   final videoPlayerService = await VideoPlayerService().init();
