@@ -4,7 +4,7 @@ set -e
 # 设置变量
 APP_NAME="TubeSavely"  # 你的应用名称
 APP_VERSION=$(grep "version:" pubspec.yaml | awk '{print $2}')  # 从pubspec.yaml读取版本号
-FLUTTER_PROJECT_PATH="/Users/Waiting/AndroidStudioProjects/TubeSavely"  # Flutter项目路径，当前目录
+FLUTTER_PROJECT_PATH="$(cd "$(dirname "$0")" && pwd)"  # Flutter项目路径，动态获取当前目录
 BUILD_PATH="${FLUTTER_PROJECT_PATH}/build/macos/Build/Products/Release"  # 构建输出路径
 APP_PATH="${BUILD_PATH}/${APP_NAME}.app"  # 应用的完整路径
 ICON_PATH="${APP_PATH}/Contents/Resources/AppIcon.icns"  # 应用图标路径
