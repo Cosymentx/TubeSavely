@@ -122,8 +122,9 @@ class DownloadService extends GetxService {
         downloadDirectory = savePath ?? await getDefaultDownloadPath();
       }
 
+      final token = await Get.find<StorageProvider>().getUserToken();
       final mediaRequest = MediaDownloadRequest.forVideo(
-          video, Get.find<StorageProvider>().getUserToken(),
+          video, token,
           quality: quality, format: format);
       final DownloadTask bgTask = DownloadTask(
         taskId: taskId,
