@@ -14,23 +14,46 @@ class VideoRepository {
   // 解析视频链接
   Future<VideoModel?> parseVideo(String url) async {
     try {
-      // 首先尝试使用视频解析服务解析
+      final token = _storageProvider.getUserToken();
+      final hasToken = token != null && token.isNotEmpty;
+
+      // 如果用户已登录，优先调用后台解析接口获取完整画质与直链
+      if (hasToken) {
+        Logger.d('User logged in, trying backend API first for parsing: $url');
+        final response = await _apiProvider.parseVideo(url);
+        if (response.status.isOk && response.body != null) {
+          final body = response.body;
+          if (body is Map<String, dynamic>) {
+            if (body['code'] == 200 && body['data'] is Map<String, dynamic>) {
+              return VideoModel.fromJson(body['data'] as Map<String, dynamic>);
+            }
+            if (body.containsKey('title') || body.containsKey('qualities')) {
+              return VideoModel.fromJson(body);
+            }
+          }
+        }
+        Logger.d('Backend API parse failed or returned empty, falling back to VideoParserService');
+      }
+
+      // 使用本地视频解析服务解析
       final videoModel = await _videoParserService.parseVideo(url);
       if (videoModel != null) {
         Logger.d('Video parsed successfully using VideoParserService');
         return videoModel;
       }
 
-      // 如果解析服务失败，尝试使用API解析
-      Logger.d('Falling back to API for video parsing');
-      final response = await _apiProvider.parseVideo(url);
-      if (response.status.isOk && response.body != null) {
-        final body = response.body;
-        if (body is Map<String, dynamic>) {
-          if (body['code'] == 200 && body['data'] is Map<String, dynamic>) {
-            return VideoModel.fromJson(body['data'] as Map<String, dynamic>);
+      // 如果未登录或本地解析服务未成功，尝试调用API解析
+      if (!hasToken) {
+        Logger.d('Falling back to API for video parsing');
+        final response = await _apiProvider.parseVideo(url);
+        if (response.status.isOk && response.body != null) {
+          final body = response.body;
+          if (body is Map<String, dynamic>) {
+            if (body['code'] == 200 && body['data'] is Map<String, dynamic>) {
+              return VideoModel.fromJson(body['data'] as Map<String, dynamic>);
+            }
+            return VideoModel.fromJson(body);
           }
-          return VideoModel.fromJson(body);
         }
       }
 

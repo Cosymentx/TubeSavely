@@ -2,8 +2,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import '../../../services/user_service.dart';
 import '../widgets/desktop_dialog_wrapper.dart';
 import 'desktop_about_dialog.dart';
+import 'desktop_auth_dialog.dart';
 import 'desktop_compress_view.dart';
 import 'desktop_convert_view.dart';
 import 'desktop_download_view.dart';
@@ -197,12 +199,78 @@ class _DesktopHomeViewState extends State<DesktopHomeView> {
                       ),
                     ),
 
-                  // 右侧设置与关于按钮
+                  // 右侧用户登录/设置/关于按钮
                   Positioned(
                     right: 0,
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        // 用户登录 / 账号中心 按钮
+                        Obx(() {
+                          final userService = Get.find<UserService>();
+                          final isLoggedIn = userService.isLoggedIn.value;
+                          final user = userService.currentUser.value;
+
+                          return Tooltip(
+                            message: isLoggedIn
+                                ? (user?.username ?? user?.email ?? 'account_settings'.tr)
+                                : 'login'.tr,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(20),
+                              onTap: () => DesktopAuthDialog.show(context),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(20),
+                                  color: isLoggedIn
+                                      ? primaryColor.withOpacity(0.1)
+                                      : Colors.transparent,
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (isLoggedIn && user?.avatar != null && user!.avatar!.isNotEmpty)
+                                      ClipOval(
+                                        child: Image.network(
+                                          user.avatar!,
+                                          width: 20,
+                                          height: 20,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) => Icon(
+                                            Icons.account_circle,
+                                            size: 20,
+                                            color: primaryColor,
+                                          ),
+                                        ),
+                                      )
+                                    else
+                                      Icon(
+                                        isLoggedIn ? Icons.account_circle : Icons.account_circle_outlined,
+                                        size: 20,
+                                        color: isLoggedIn
+                                            ? primaryColor
+                                            : theme.colorScheme.onSurface.withOpacity(0.55),
+                                      ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      isLoggedIn
+                                          ? (user?.username ?? 'user'.tr)
+                                          : 'login'.tr,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: isLoggedIn ? FontWeight.w600 : FontWeight.normal,
+                                        color: isLoggedIn
+                                            ? primaryColor
+                                            : theme.colorScheme.onSurface.withOpacity(0.7),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                        const SizedBox(width: 4),
                         IconButton(
                           iconSize: 20,
                           splashRadius: 18,
