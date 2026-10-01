@@ -229,7 +229,10 @@ class _DesktopHomeViewState extends State<DesktopHomeView> {
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    if (isLoggedIn && user?.avatar != null && user!.avatar!.isNotEmpty)
+                                    if (isLoggedIn &&
+                                        user?.avatar != null &&
+                                        user!.avatar!.isNotEmpty &&
+                                        !user.avatar!.toLowerCase().contains('.svg'))
                                       ClipOval(
                                         child: Image.network(
                                           user.avatar!,
