@@ -1,16 +1,20 @@
 import 'dart:io';
 import 'dart:convert';
 import 'package:get/get.dart';
-import 'package:get_storage/get_storage.dart';
 import '../../utils/constants.dart';
 import '../../utils/logger.dart';
 import '../models/api_response_model.dart';
+import 'storage_provider.dart';
 
 /// API提供者
 ///
 /// 负责与后端API通信，提供各种API请求方法
 class ApiProvider extends GetConnect {
-  final GetStorage _storage = Get.find<GetStorage>();
+  String? _authToken;
+
+  void setAuthToken(String? token) {
+    _authToken = token;
+  }
 
   @override
   void onInit() {
@@ -24,7 +28,7 @@ class ApiProvider extends GetConnect {
       request.headers['Content-Type'] = 'application/json';
 
       // 添加认证令牌（如果有）
-      final token = _storage.read<String>(Constants.STORAGE_USER_TOKEN);
+      final token = _authToken;
       if (token != null && token.isNotEmpty) {
         request.headers['Authorization'] = 'Bearer $token';
       }
@@ -37,7 +41,8 @@ class ApiProvider extends GetConnect {
       // 处理响应
       if (response.status.isUnauthorized) {
         // 处理401未授权错误：清除本地令牌，仅在移动端重定向
-        _storage.remove(Constants.STORAGE_USER_TOKEN);
+        _authToken = null;
+        Get.find<StorageProvider>().clearUserToken();
         if (GetPlatform.isMobile) {
           Get.offAllNamed('/login');
         }
