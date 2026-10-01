@@ -163,17 +163,44 @@ jobs:
       - name: Build macOS Application
         run: flutter build macos --release
 
-      - name: Compress macOS Application
+      - name: Package macOS DMG Installer
         run: |
-          cd build/macos/Build/Products/Release
-          ditto -c -k --sequesterRsrc --keepParent TubeSavely.app ../../../../../TubeSavely-macOS.zip
-          cd ../../../../..
+          mkdir -p dmg_staging
+          cp -R build/macos/Build/Products/Release/TubeSavely.app dmg_staging/
+
+          # 尝试使用 create-dmg 生成带拖拽安装界面的 DMG
+          if ! command -v create-dmg &> /dev/null; then
+            brew install create-dmg || true
+          fi
+
+          if command -v create-dmg &> /dev/null; then
+            create-dmg \
+              --volname "TubeSavely" \
+              --window-pos 200 120 \
+              --window-size 600 400 \
+              --icon-size 100 \
+              --icon "TubeSavely.app" 175 120 \
+              --hide-extension "TubeSavely.app" \
+              --app-drop-link 425 120 \
+              --skip-jenkins \
+              TubeSavely-macOS.dmg \
+              dmg_staging/ || true
+          fi
+
+          # 若 create-dmg 失败或未生成，使用 macOS 原生 hdiutil 打包
+          if [ ! -f "TubeSavely-macOS.dmg" ]; then
+            echo "Falling back to native hdiutil to create DMG installer..."
+            ln -sf /Applications dmg_staging/Applications
+            hdiutil create -volname "TubeSavely" -srcfolder dmg_staging -ov -format UDZO TubeSavely-macOS.dmg
+          fi
+
+          rm -rf dmg_staging
 
       - name: Upload macOS Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: macos-release-zip
-          path: TubeSavely-macOS.zip
+          name: macos-release-dmg
+          path: TubeSavely-macOS.dmg
           retention-days: 1
 
   # ============================================================

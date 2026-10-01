@@ -23,6 +23,7 @@ abstract class Routes {
   static const TASK = _Paths.TASK;
   static const CREDIT = _Paths.CREDIT;
   static const COMPRESS = _Paths.COMPRESS;
+  static const DESKTOP_HOME = _Paths.DESKTOP_HOME;
 }
 
 abstract class _Paths {
@@ -48,4 +49,5 @@ abstract class _Paths {
   static const TASK = '/task';
   static const CREDIT = '/credit';
   static const COMPRESS = '/compress';
+  static const DESKTOP_HOME = '/desktop-home';
 }
