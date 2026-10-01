@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/video_processing/ffmpeg_installer_service.dart';
@@ -100,8 +99,8 @@ class _FFmpegInstallDialogState extends State<FFmpegInstallDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusMd)),
       title: Row(
         children: [
-          Icon(Icons.video_settings, color: AppColors.primary, size: 24.sp),
-          SizedBox(width: 8.w),
+          const Icon(Icons.video_settings, color: AppColors.primary, size: 24),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               'ffmpeg_install_title'.tr,
@@ -111,7 +110,7 @@ class _FFmpegInstallDialogState extends State<FFmpegInstallDialog> {
         ],
       ),
       content: SizedBox(
-        width: 440.w,
+        width: 440,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -120,12 +119,12 @@ class _FFmpegInstallDialogState extends State<FFmpegInstallDialog> {
               'ffmpeg_install_desc'.tr,
               style: AppTextStyles.bodyMedium,
             ),
-            SizedBox(height: 8.h),
+            const SizedBox(height: 8),
             Text(
               'ffmpeg_not_found'.tr,
               style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
             ),
-            SizedBox(height: 16.h),
+            const SizedBox(height: 16),
             if (_status == FFmpegInstallStatus.notInstalled || _status == FFmpegInstallStatus.failed)
               _buildInstallOptions()
             else
@@ -160,11 +159,11 @@ class _FFmpegInstallDialogState extends State<FFmpegInstallDialog> {
           'ffmpeg_install_options'.tr,
           style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
         ),
-        SizedBox(height: 8.h),
+        const SizedBox(height: 8),
         Material(
           color: Colors.transparent,
           child: ListTile(
-            contentPadding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
               side: const BorderSide(color: AppColors.primaryLight25),
@@ -179,11 +178,11 @@ class _FFmpegInstallDialogState extends State<FFmpegInstallDialog> {
             onTap: _installFFmpeg,
           ),
         ),
-        SizedBox(height: 8.h),
+        const SizedBox(height: 8),
         Material(
           color: Colors.transparent,
           child: ListTile(
-            contentPadding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
               side: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
@@ -214,7 +213,7 @@ class _FFmpegInstallDialogState extends State<FFmpegInstallDialog> {
     }
 
     return Container(
-      padding: EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: statusColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
@@ -224,8 +223,8 @@ class _FFmpegInstallDialogState extends State<FFmpegInstallDialog> {
         children: [
           Row(
             children: [
-              Icon(statusIcon, color: statusColor, size: 22.sp),
-              SizedBox(width: 8.w),
+              Icon(statusIcon, color: statusColor, size: 22),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   _message,
@@ -234,19 +233,19 @@ class _FFmpegInstallDialogState extends State<FFmpegInstallDialog> {
               ),
             ],
           ),
-          SizedBox(height: 12.h),
+          const SizedBox(height: 12),
           ClipRRect(
-            borderRadius: BorderRadius.circular(4.r),
+            borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: _progress > 0 ? _progress : null,
               backgroundColor: statusColor.withValues(alpha: 0.15),
               valueColor: AlwaysStoppedAnimation<Color>(statusColor),
-              minHeight: 6.h,
+              minHeight: 6,
             ),
           ),
           if (_status == FFmpegInstallStatus.failed)
             Padding(
-              padding: EdgeInsets.only(top: 12.h),
+              padding: const EdgeInsets.only(top: 12),
               child: Align(
                 alignment: Alignment.centerRight,
                 child: ElevatedButton.icon(

@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'app_colors.dart';
-import 'app_spacing.dart';
 
 class AppTheme {
-  // 主色调 - 与 AppColors 统一
-  static const Color primaryColor = Color(0xFF3B82F6);
-  static const Color accentColor = Color(0xFF0EA5E9);
+  // 主色调 - 品牌红色（与 AppColors 统一）
+  static const Color primaryColor = Color(0xFFFF0014);
+  static const Color accentColor = Color(0xFFFF4444);
   static const Color lightBackground = Color(0xFFF8FAFC);
   static const Color darkBackground = Color(0xFF0F172A);
   static const Color lightCardBackground = Color(0xFFFFFFFF);

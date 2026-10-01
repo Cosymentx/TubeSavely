@@ -310,7 +310,7 @@ class _DesktopSettingDialogState extends State<DesktopSettingDialog> {
           style: TextStyle(
             fontSize: 12,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface,
+            color: isSelected ? Colors.white : primaryColor,
           ),
         ),
       ),

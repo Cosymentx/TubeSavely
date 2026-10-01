@@ -6,29 +6,30 @@ import 'package:get/get.dart';
 class AppColors {
   AppColors._();
 
-  // 主色调 - 这些颜色在深色和浅色主题中保持一致
-  static const Color primary = Color(0xFF3B82F6);
-  static const Color primaryLight = Color(0xFF60A5FA);
-  static const Color primaryDark = Color(0xFF2563EB);
+  // 主色调 - 品牌红色
+  static const Color primary = Color(0xFFFF0014);
+  static const Color primaryLight = Color(0xFFFF5252);
+  static const Color primaryDark = Color(0xFFD50000);
 
-  // 强调色 - 这些颜色在深色和浅色主题中保持一致
-  static const Color accent = Color(0xFF0EA5E9);
-  static const Color accentLight = Color(0xFF38BDF8);
-  static const Color accentDark = Color(0xFF0284C7);
+  // 强调色
+  static const Color accent = Color(0xFFFF4444);
+  static const Color accentLight = Color(0xFFFF6B6B);
+  static const Color accentDark = Color(0xFFCC0000);
 
   // 状态色 - 这些颜色在深色和浅色主题中保持一致
   static const Color success = Color(0xFF22C55E);
   static const Color warning = Color(0xFFF59E0B);
   static const Color error = Color(0xFFEF4444);
-  static const Color info = Color(0xFF3B82F6);
+  static const Color info = Color(0xFFFF0014);
 
   // 阴影色
   static const Color shadow = Color(0x1A000000);
 
   // 颜色透明度变体（用于背景）
-  static const Color primaryLight5 = Color(0x0D3B82F6);   // 5% 不透明度
-  static const Color primaryLight10 = Color(0x1A3B82F6);  // 10% 不透明度
-  static const Color primaryLight25 = Color(0x403B82F6);  // 25% 不透明度
+  static const Color primaryLight5 = Color(0x0DFF0014);   // 5% 不透明度
+  static const Color primaryLight10 = Color(0x1AFF0014);  // 10% 不透明度
+  static const Color primaryLight25 = Color(0x40FF0014);  // 25% 不透明度
+
 
   // 浅色主题颜色
   static const Color _lightBackground = Color(0xFFF8FAFC);
