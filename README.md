@@ -24,7 +24,9 @@ TubeSavely 是一套跨平台的视频下载工具，由以下三个项目共同
 |------|--------|------|------|
 | **TubeSavely** | Flutter | 跨平台桌面 & 移动端客户端（Windows / macOS / Linux / iOS / Android） | [![GitHub](https://img.shields.io/badge/GitHub-TubeSavely-181717?logo=github)](https://github.com/Cosymentx/TubeSavely) |
 | **TubeSavely-Vue** | Vue 3 | 网页端 Web 客户端，支持浏览器直接访问和下载 | [![GitHub](https://img.shields.io/badge/GitHub-TubeSavely--Vue-181717?logo=github)](https://github.com/Cosymentx/TubeSavely-Vue) |
-| **TubeSavely-Server** | Python | 后端解析服务，提供统一的视频解析 API 支撑前端与客户端 | [![GitHub](https://img.shields.io/badge/GitHub-TubeSavely--Server-181717?logo=github)](https://github.com/Cosymentx/TubeSavely-Server) |
+| **TubeSavely-Server** | Python | 后端 API 服务，提供视频解析、用户、积分和支付接口 | [![GitHub](https://img.shields.io/badge/GitHub-TubeSavely--Server-181717?logo=github)](https://github.com/Cosymentx/TubeSavely-Server) |
+
+[访问 Web 客户端](https://tube-savely-vue.vercel.app) · [查看 API 文档](https://tube-savely-server.vercel.app/docs)
 
 ---
 
