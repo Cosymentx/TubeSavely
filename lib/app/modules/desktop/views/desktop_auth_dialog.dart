@@ -132,10 +132,14 @@ class _DesktopAuthDialogState extends State<DesktopAuthDialog> {
           CircleAvatar(
             radius: 36,
             backgroundColor: primaryColor.withOpacity(0.12),
-            backgroundImage: (user.avatar != null && user.avatar!.isNotEmpty)
+            backgroundImage: (user.avatar != null &&
+                    user.avatar!.isNotEmpty &&
+                    !user.avatar!.toLowerCase().contains('.svg'))
                 ? NetworkImage(user.avatar!)
                 : null,
-            child: (user.avatar == null || user.avatar!.isEmpty)
+            child: (user.avatar == null ||
+                    user.avatar!.isEmpty ||
+                    user.avatar!.toLowerCase().contains('.svg'))
                 ? Icon(Icons.person, size: 36, color: primaryColor)
                 : null,
           ),
