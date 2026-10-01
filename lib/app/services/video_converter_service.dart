@@ -509,11 +509,6 @@ class VideoConverterService extends GetxService {
       );
       await _updateTask(updatedTask);
 
-      final fileName = sourceFile.path.split(Platform.pathSeparator).last;
-
-      // 通知用户转换开始
-      Utils.showSnackbar('convert_start'.tr, 'convert_start_msg'.trParams({'name': fileName}));
-
       // 设置当前任务ID
       _currentTaskId = task.id;
 
@@ -521,7 +516,6 @@ class VideoConverterService extends GetxService {
       final isCopyStream = _canUseStreamCopy(task, mediaInfo);
       if (isCopyStream) {
         Logger.i('Stream Copy remuxing enabled for task ${task.id}');
-        Utils.showSnackbar('tips'.tr, 'convert_stream_copy_hint'.tr);
       }
 
       // 准备转换选项
@@ -619,10 +613,6 @@ class VideoConverterService extends GetxService {
           );
 
           await _updateTask(completedTask);
-
-          // 通知用户转换完成
-          final outFileName = outputFile.path.split(Platform.pathSeparator).last;
-          Utils.showSnackbar('convert_success'.tr, 'convert_success_msg'.trParams({'name': outFileName}));
         } else {
           // 输出文件不存在或为空
           final failedTask = updatedTask.copyWith(
