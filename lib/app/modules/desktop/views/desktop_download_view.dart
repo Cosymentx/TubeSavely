@@ -59,12 +59,17 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
         return;
       }
 
-      if (!text.startsWith('http://') && !text.startsWith('https://')) {
+      String url = text;
+      final urlReg = RegExp(r'https?://[^\s\u4e00-\u9fa5]+');
+      final match = urlReg.firstMatch(text);
+      if (match != null) {
+        url = match.group(0)!;
+      } else if (!text.startsWith('http://') && !text.startsWith('https://')) {
         Utils.showSnackbar('tips'.tr, 'toast_link_invalid'.tr);
         return;
       }
 
-      if (_items.any((item) => item.video.url == text)) {
+      if (_items.any((item) => item.video.url == url)) {
         Utils.showSnackbar('tips'.tr, 'toast_link_exists'.tr);
         return;
       }
@@ -74,7 +79,7 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
       });
 
       // 优先调用 VideoRepository 进行解析（本地解析器优先，后端 API 回退）
-      final video = await _videoRepository.parseVideo(text).timeout(
+      final video = await _videoRepository.parseVideo(url).timeout(
         const Duration(seconds: 12),
         onTimeout: () => null,
       );
@@ -88,14 +93,14 @@ class _DesktopDownloadViewState extends State<DesktopDownloadView>
         });
       } else {
         // 本地降级：直接以 URL 作为单任务加入列表
-        final rawTitle = text.split('?').first.split('/').last.trim();
+        final rawTitle = url.split('?').first.split('/').last.trim();
         final fallbackTitle = rawTitle.isNotEmpty ? rawTitle : 'Video_${DateTime.now().millisecondsSinceEpoch}';
         setState(() {
           _items.add(DesktopDownloadItem(
             video: VideoModel(
               id: DateTime.now().millisecondsSinceEpoch.toString(),
               title: fallbackTitle,
-              url: text,
+              url: url,
             ),
             statusText: 'status_download_progress'.tr,
           ));

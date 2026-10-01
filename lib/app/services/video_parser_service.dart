@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../data/models/video_model.dart';
+import '../data/providers/api_provider.dart';
 import '../utils/constants.dart';
 import '../utils/logger.dart';
 
@@ -23,13 +24,6 @@ class VideoParserService extends GetxService {
     try {
       // 判断URL属于哪个平台
       final platform = _detectPlatform(url);
-
-      if (platform == null) {
-        Logger.w('Unsupported platform: $url');
-        return null;
-      }
-
-      // 根据平台调用不同的解析方法
       switch (platform) {
         case 'YouTube':
           return await _parseYouTube(url);
@@ -40,7 +34,7 @@ class VideoParserService extends GetxService {
         case 'Instagram':
           return await _parseInstagram(url);
         default:
-          // 使用通用API解析
+          // 使用通用API或网页标签解析其他平台及直接链接
           return await _parseGeneric(url);
       }
     } catch (e) {
@@ -67,6 +61,10 @@ class VideoParserService extends GetxService {
   ///
   /// [url] YouTube视频链接
   /// 返回解析后的视频模型
+  /// 解析YouTube视频
+  ///
+  /// [url] YouTube视频链接
+  /// 返回解析后的视频模型
   Future<VideoModel?> _parseYouTube(String url) async {
     try {
       // 提取视频ID
@@ -74,70 +72,97 @@ class VideoParserService extends GetxService {
 
       if (videoId == null) {
         Logger.w('Invalid YouTube URL: $url');
-        return null;
+        return await _parseGeneric(url);
       }
 
       Logger.d('Extracted YouTube video ID: $videoId');
 
-      // 构建API请求URL
-      final apiUrl =
-          'https://www.googleapis.com/youtube/v3/videos?id=$videoId&part=snippet,contentDetails&key=${Constants.YOUTUBE_API_KEY}';
+      // 1. 如果配置了 YouTube API 密钥，先走官方 Data API
+      if (Constants.YOUTUBE_API_KEY.isNotEmpty) {
+        try {
+          final apiUrl =
+              'https://www.googleapis.com/youtube/v3/videos?id=$videoId&part=snippet,contentDetails&key=${Constants.YOUTUBE_API_KEY}';
+          final response = await http.get(
+            Uri.parse(apiUrl),
+            headers: {'Accept': 'application/json'},
+          ).timeout(const Duration(milliseconds: Constants.API_TIMEOUT));
 
-      // 如果没有配置YouTube API密钥，则回退到通用解析方法
-      if (Constants.YOUTUBE_API_KEY.isEmpty) {
-        Logger.w(
-            'YouTube API key not configured, falling back to generic parser');
-        return await _parseGeneric(url);
+          if (response.statusCode == 200) {
+            final data = jsonDecode(response.body);
+            if (data['items'] != null && (data['items'] as List).isNotEmpty) {
+              final item = data['items'][0];
+              final snippet = item['snippet'];
+              final contentDetails = item['contentDetails'];
+              int? duration;
+              if (contentDetails != null && contentDetails['duration'] != null) {
+                duration = _parseDuration(contentDetails['duration']);
+              }
+              return VideoModel(
+                id: videoId,
+                title: snippet['title'] ?? 'YouTube Video',
+                url: url,
+                thumbnail: snippet['thumbnails']?['high']?['url'] ??
+                    snippet['thumbnails']?['default']?['url'] ??
+                    'https://i.ytimg.com/vi/$videoId/hqdefault.jpg',
+                platform: 'YouTube',
+                author: snippet['channelTitle'],
+                authorUrl: 'https://www.youtube.com/channel/${snippet['channelId']}',
+                duration: duration,
+                qualities: _generateYouTubeQualities(videoId),
+                formats: _generateYouTubeFormats(videoId),
+                createdAt: DateTime.now(),
+              );
+            }
+          }
+        } catch (e) {
+          Logger.w('YouTube Data API error: $e');
+        }
       }
 
-      // 发送请求
-      final response = await http.get(
-        Uri.parse(apiUrl),
-        headers: {'Accept': 'application/json'},
-      ).timeout(const Duration(milliseconds: Constants.API_TIMEOUT));
+      // 2. 免费免鉴权方案：通过 YouTube oEmbed 接口解析标题、作者、高清封面
+      try {
+        final oembedUrl =
+            'https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=$videoId&format=json';
+        final oembedResponse =
+            await http.get(Uri.parse(oembedUrl)).timeout(const Duration(seconds: 6));
+        if (oembedResponse.statusCode == 200) {
+          final data = jsonDecode(oembedResponse.body);
+          final title = data['title'] as String?;
+          final authorName = data['author_name'] as String?;
+          final authorUrl = data['author_url'] as String?;
+          final thumb = (data['thumbnail_url'] as String?) ??
+              'https://i.ytimg.com/vi/$videoId/hqdefault.jpg';
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-
-        // 检查是否有结果
-        if (data['items'] == null || data['items'].isEmpty) {
-          Logger.w('No video found with ID: $videoId');
-          return null;
+          return VideoModel(
+            id: videoId,
+            title: (title != null && title.isNotEmpty) ? title : 'YouTube Video ($videoId)',
+            url: url,
+            thumbnail: thumb,
+            platform: 'YouTube',
+            author: authorName,
+            authorUrl: authorUrl,
+            qualities: _generateYouTubeQualities(videoId),
+            formats: _generateYouTubeFormats(videoId),
+            createdAt: DateTime.now(),
+          );
         }
-
-        final item = data['items'][0];
-        final snippet = item['snippet'];
-        final contentDetails = item['contentDetails'];
-
-        // 解析时长
-        int? duration;
-        if (contentDetails != null && contentDetails['duration'] != null) {
-          duration = _parseDuration(contentDetails['duration']);
-        }
-
-        // 构建视频模型
-        return VideoModel(
-          id: videoId,
-          title: snippet['title'] ?? 'Unknown Title',
-          url: url,
-          thumbnail: snippet['thumbnails']?['high']?['url'] ??
-              snippet['thumbnails']?['default']?['url'],
-          platform: 'YouTube',
-          author: snippet['channelTitle'],
-          authorUrl: 'https://www.youtube.com/channel/${snippet['channelId']}',
-          duration: duration,
-          qualities: _generateYouTubeQualities(videoId),
-          formats: _generateYouTubeFormats(videoId),
-          createdAt: DateTime.now(),
-        );
-      } else {
-        Logger.e('YouTube API error: ${response.statusCode} ${response.body}');
-        // 回退到通用解析方法
-        return await _parseGeneric(url);
+      } catch (e) {
+        Logger.w('YouTube oEmbed parse error: $e');
       }
+
+      // 3. 本地保底：根据 videoId 自动拼装高质量封面与清晰度选项
+      return VideoModel(
+        id: videoId,
+        title: 'YouTube Video ($videoId)',
+        url: url,
+        thumbnail: 'https://i.ytimg.com/vi/$videoId/hqdefault.jpg',
+        platform: 'YouTube',
+        qualities: _generateYouTubeQualities(videoId),
+        formats: _generateYouTubeFormats(videoId),
+        createdAt: DateTime.now(),
+      );
     } catch (e) {
       Logger.e('Error parsing YouTube video: $e');
-      // 回退到通用解析方法
       return await _parseGeneric(url);
     }
   }
@@ -147,30 +172,17 @@ class VideoParserService extends GetxService {
   /// [url] YouTube视频链接
   /// 返回视频ID，如果无法提取则返回null
   String? _extractYouTubeVideoId(String url) {
-    // 标准YouTube URL格式: https://www.youtube.com/watch?v=VIDEO_ID
-    RegExp regExp1 = RegExp(r'youtube\.com/watch\?v=([^&]+)');
+    // 标准 watch 格式: watch?v=ID
+    final m1 = RegExp(r'[?&]v=([a-zA-Z0-9_-]{11})').firstMatch(url);
+    if (m1 != null) return m1.group(1);
 
-    // 短链接格式: https://youtu.be/VIDEO_ID
-    RegExp regExp2 = RegExp(r'youtu\.be/([^?]+)');
+    // 短链格式 youtu.be/ID
+    final m2 = RegExp(r'youtu\.be/([a-zA-Z0-9_-]{11})').firstMatch(url);
+    if (m2 != null) return m2.group(1);
 
-    // 嵌入格式: https://www.youtube.com/embed/VIDEO_ID
-    RegExp regExp3 = RegExp(r'youtube\.com/embed/([^?]+)');
-
-    // 尝试匹配各种格式
-    Match? match = regExp1.firstMatch(url);
-    if (match != null && match.groupCount >= 1) {
-      return match.group(1);
-    }
-
-    match = regExp2.firstMatch(url);
-    if (match != null && match.groupCount >= 1) {
-      return match.group(1);
-    }
-
-    match = regExp3.firstMatch(url);
-    if (match != null && match.groupCount >= 1) {
-      return match.group(1);
-    }
+    // shorts / embed / live 格式
+    final m3 = RegExp(r'youtube\.com/(?:embed|shorts|live|v)/([a-zA-Z0-9_-]{11})').firstMatch(url);
+    if (m3 != null) return m3.group(1);
 
     return null;
   }
@@ -282,11 +294,49 @@ class VideoParserService extends GetxService {
   /// 返回解析后的视频模型
   Future<VideoModel?> _parseBilibili(String url) async {
     try {
-      // 调用API解析
+      final bvMatch = RegExp(r'(BV[a-zA-Z0-9]+)').firstMatch(url);
+      final bvid = bvMatch?.group(1);
+      final avMatch = RegExp(r'av(\d+)').firstMatch(url);
+      final aid = avMatch?.group(1);
+
+      if (bvid != null || aid != null) {
+        final queryParam = bvid != null ? 'bvid=$bvid' : 'aid=$aid';
+        final apiUrl = 'https://api.bilibili.com/x/web-interface/view?$queryParam';
+        try {
+          final response = await http.get(Uri.parse(apiUrl), headers: {
+            'User-Agent':
+                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          }).timeout(const Duration(seconds: 6));
+
+          if (response.statusCode == 200) {
+            final json = jsonDecode(response.body);
+            if (json['code'] == 0 && json['data'] != null) {
+              final data = json['data'];
+              final idStr = (bvid ?? aid)!;
+              return VideoModel(
+                id: idStr,
+                title: data['title'] ?? 'Bilibili Video',
+                url: url,
+                thumbnail: data['pic'],
+                platform: 'Bilibili',
+                author: data['owner']?['name'],
+                authorUrl: data['owner']?['mid'] != null
+                    ? 'https://space.bilibili.com/${data['owner']['mid']}'
+                    : null,
+                duration: data['duration'] as int?,
+                createdAt: DateTime.now(),
+              );
+            }
+          }
+        } catch (e) {
+          Logger.w('Bilibili public api error: $e');
+        }
+      }
+
       return await _parseGeneric(url);
     } catch (e) {
       Logger.e('Error parsing Bilibili video: $e');
-      return null;
+      return await _parseGeneric(url);
     }
   }
 
@@ -296,11 +346,32 @@ class VideoParserService extends GetxService {
   /// 返回解析后的视频模型
   Future<VideoModel?> _parseTikTok(String url) async {
     try {
-      // 调用API解析
+      final oembedUrl =
+          'https://www.tiktok.com/oembed?url=${Uri.encodeComponent(url)}';
+      try {
+        final response =
+            await http.get(Uri.parse(oembedUrl)).timeout(const Duration(seconds: 6));
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          return VideoModel(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            title: data['title'] ?? 'TikTok Video',
+            url: url,
+            thumbnail: data['thumbnail_url'],
+            platform: 'TikTok',
+            author: data['author_name'],
+            authorUrl: data['author_url'],
+            createdAt: DateTime.now(),
+          );
+        }
+      } catch (e) {
+        Logger.w('TikTok oEmbed error: $e');
+      }
+
       return await _parseGeneric(url);
     } catch (e) {
       Logger.e('Error parsing TikTok video: $e');
-      return null;
+      return await _parseGeneric(url);
     }
   }
 
@@ -310,7 +381,6 @@ class VideoParserService extends GetxService {
   /// 返回解析后的视频模型
   Future<VideoModel?> _parseInstagram(String url) async {
     try {
-      // 调用API解析
       return await _parseGeneric(url);
     } catch (e) {
       Logger.e('Error parsing Instagram video: $e');
@@ -324,21 +394,126 @@ class VideoParserService extends GetxService {
   /// 返回解析后的视频模型
   Future<VideoModel?> _parseGeneric(String url) async {
     try {
-      final apiUrl =
-          '${Constants.API_BASE_URL}/parse?url=${Uri.encodeComponent(url)}';
+      final uri = Uri.tryParse(url);
+      final path = uri?.path.toLowerCase() ?? '';
 
-      final response = await http.get(
-        Uri.parse(apiUrl),
-        headers: {'Accept': 'application/json'},
-      ).timeout(const Duration(milliseconds: Constants.API_TIMEOUT));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return VideoModel.fromJson(data);
-      } else {
-        Logger.e('API error: ${response.statusCode} ${response.body}');
-        return null;
+      // 1. 如果本身就是视频直链（如 .mp4, .mov, .m4v, .m3u8, .flv, .webm）
+      if (path.endsWith('.mp4') ||
+          path.endsWith('.mov') ||
+          path.endsWith('.m4v') ||
+          path.endsWith('.webm') ||
+          path.endsWith('.m3u8')) {
+        final name = uri != null && uri.pathSegments.isNotEmpty
+            ? uri.pathSegments.last
+            : 'Video_${DateTime.now().millisecondsSinceEpoch}';
+        return VideoModel(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          title: name,
+          url: url,
+          platform: 'DirectLink',
+          createdAt: DateTime.now(),
+        );
       }
+
+      // 2. 尝试调用后端 /api/v1/videos/parse 接口（若用户已登录或后端支持）
+      try {
+        if (Get.isRegistered<ApiProvider>()) {
+          final apiProvider = Get.find<ApiProvider>();
+          final res = await apiProvider.parseVideo(url).timeout(const Duration(seconds: 6));
+          if (res.isOk && res.body != null) {
+            final body = res.body;
+            final videoData = (body is Map<String, dynamic> && body.containsKey('data'))
+                ? body['data']
+                : body;
+            if (videoData is Map<String, dynamic> && videoData.isNotEmpty) {
+              return VideoModel.fromJson(videoData);
+            }
+          }
+        }
+      } catch (e) {
+        Logger.w('Backend parse api failed: $e');
+      }
+
+      // 3. 通用 HTML OpenGraph / Twitter meta 标签解析
+      try {
+        final response = await http.get(
+          Uri.parse(url),
+          headers: {
+            'User-Agent':
+                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept':
+                'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          },
+        ).timeout(const Duration(seconds: 6));
+
+        if (response.statusCode == 200) {
+          final html = response.body;
+
+          // 提取标题：优先 og:title / twitter:title，其次 <title>
+          String? title;
+          final ogTitle = RegExp(
+                  r'<meta\s+[^>]*property=["\x27]og:title["\x27][^>]*content=["\x27]([^"\x27]+)["\x27]',
+                  caseSensitive: false)
+              .firstMatch(html) ??
+              RegExp(r'<meta\s+[^>]*content=["\x27]([^"\x27]+)["\x27][^>]*property=["\x27]og:title["\x27]',
+                      caseSensitive: false)
+                  .firstMatch(html) ??
+              RegExp(r'<meta\s+[^>]*name=["\x27]twitter:title["\x27][^>]*content=["\x27]([^"\x27]+)["\x27]',
+                      caseSensitive: false)
+                  .firstMatch(html);
+          if (ogTitle != null) {
+            title = ogTitle.group(1);
+          } else {
+            final titleMatch =
+                RegExp(r'<title[^>]*>(.*?)</title>', caseSensitive: false)
+                    .firstMatch(html);
+            title = titleMatch?.group(1);
+          }
+
+          // 提取封面：优先 og:image / twitter:image
+          String? thumbnail;
+          final ogImage = RegExp(
+                  r'<meta\s+[^>]*property=["\x27]og:image["\x27][^>]*content=["\x27]([^"\x27]+)["\x27]',
+                  caseSensitive: false)
+              .firstMatch(html) ??
+              RegExp(r'<meta\s+[^>]*content=["\x27]([^"\x27]+)["\x27][^>]*property=["\x27]og:image["\x27]',
+                      caseSensitive: false)
+                  .firstMatch(html) ??
+              RegExp(r'<meta\s+[^>]*name=["\x27]twitter:image["\x27][^>]*content=["\x27]([^"\x27]+)["\x27]',
+                      caseSensitive: false)
+                  .firstMatch(html);
+          if (ogImage != null) {
+            thumbnail = ogImage.group(1);
+          }
+
+          if (title != null && title.trim().isNotEmpty) {
+            final cleanTitle = title.replaceAll(RegExp(r'\s+'), ' ').trim();
+            return VideoModel(
+              id: DateTime.now().millisecondsSinceEpoch.toString(),
+              title: cleanTitle,
+              url: url,
+              thumbnail: thumbnail,
+              platform: _detectPlatform(url) ?? 'Web',
+              createdAt: DateTime.now(),
+            );
+          }
+        }
+      } catch (e) {
+        Logger.w('HTML open graph parse error: $e');
+      }
+
+      // 4. 终极兜底：根据 URL 路径生成条目
+      final urlHost = uri?.host ?? 'Web';
+      final pathLast = uri != null && uri.pathSegments.isNotEmpty
+          ? uri.pathSegments.last
+          : 'Video';
+      return VideoModel(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        title: '$urlHost - $pathLast',
+        url: url,
+        platform: _detectPlatform(url) ?? 'Web',
+        createdAt: DateTime.now(),
+      );
     } catch (e) {
       Logger.e('Error in generic parser: $e');
       return null;
