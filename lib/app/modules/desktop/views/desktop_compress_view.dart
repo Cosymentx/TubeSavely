@@ -133,6 +133,8 @@ class _DesktopCompressViewState extends State<DesktopCompressView>
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryColor,
                         foregroundColor: Colors.white,
+                        disabledBackgroundColor: primaryColor.withOpacity(0.65),
+                        disabledForegroundColor: Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),

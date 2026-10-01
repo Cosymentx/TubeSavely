@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'app_colors.dart';
-import 'app_spacing.dart';
 
 class AppTheme {
   // 主色调 - 品牌红色（与 AppColors 统一）
