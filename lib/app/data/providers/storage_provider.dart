@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/download_task_model.dart';
 import '../models/user_model.dart';
 import '../models/video_model.dart';
@@ -10,14 +11,37 @@ import '../../services/video_converter_service.dart';
 
 class StorageProvider extends GetxService {
   final _box = GetStorage();
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
 
-  // 用户相关
+  // 用户相关。认证令牌只保存在平台安全存储中。
   Future<void> saveUserToken(String token) async {
-    await _box.write(Constants.STORAGE_USER_TOKEN, token);
+    await _secureStorage.write(
+      key: Constants.STORAGE_USER_TOKEN,
+      value: token,
+    );
+    // 清理旧版本遗留的明文 GetStorage token。
+    await _box.remove(Constants.STORAGE_USER_TOKEN);
   }
 
-  String? getUserToken() {
-    return _box.read<String>(Constants.STORAGE_USER_TOKEN);
+  Future<String?> getUserToken() async {
+    final secureToken =
+        await _secureStorage.read(key: Constants.STORAGE_USER_TOKEN);
+    if (secureToken != null && secureToken.isNotEmpty) {
+      return secureToken;
+    }
+
+    // 一次性迁移旧版本保存在 GetStorage 中的 token。
+    final legacyToken = _box.read<String>(Constants.STORAGE_USER_TOKEN);
+    if (legacyToken != null && legacyToken.isNotEmpty) {
+      await saveUserToken(legacyToken);
+      return legacyToken;
+    }
+    return null;
+  }
+
+  Future<void> clearUserToken() async {
+    await _secureStorage.delete(key: Constants.STORAGE_USER_TOKEN);
+    await _box.remove(Constants.STORAGE_USER_TOKEN);
   }
 
   Future<void> saveUserInfo(UserModel user) async {
@@ -35,7 +59,7 @@ class StorageProvider extends GetxService {
   }
 
   Future<void> clearUserData() async {
-    await _box.remove(Constants.STORAGE_USER_TOKEN);
+    await clearUserToken();
     await _box.remove(Constants.STORAGE_USER_INFO);
   }
 
