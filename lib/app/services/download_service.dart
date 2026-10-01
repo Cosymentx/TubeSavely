@@ -82,8 +82,15 @@ class DownloadService extends GetxService {
         downloadUrl = video.url;
       }
 
-      final String fileName =
-          '${video.title.replaceAll(RegExp(r'[^\w\s.-]'), '_')}_$quality.$format';
+      // 移除非法字符，保留中文、英文和常规符号
+      String cleanTitle = video.title
+          .replaceAll(RegExp(r'[\\/:*?"<>|\r\n\t]+'), '_')
+          .replaceAll(RegExp(r'\s+'), ' ')
+          .trim();
+      if (cleanTitle.length > 80) {
+        cleanTitle = cleanTitle.substring(0, 80).trim();
+      }
+      final String fileName = '${cleanTitle}_$quality.$format';
 
       final DownloadTaskModel taskModel = DownloadTaskModel(
         id: taskId,
@@ -101,7 +108,16 @@ class DownloadService extends GetxService {
 
       tasks.add(taskModel);
 
-      final downloadDirectory = savePath ?? await getDefaultDownloadPath();
+      // 确保 downloadDirectory 是目录而非文件路径
+      String downloadDirectory;
+      if (savePath != null && Directory(savePath).existsSync()) {
+        downloadDirectory = savePath;
+      } else if (savePath != null && savePath.endsWith('.$format')) {
+        downloadDirectory = File(savePath).parent.path;
+      } else {
+        downloadDirectory = savePath ?? await getDefaultDownloadPath();
+      }
+
       final DownloadTask bgTask = DownloadTask(
         taskId: taskId,
         url: downloadUrl,
