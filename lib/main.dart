@@ -3,12 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-import 'package:path/path.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'app/routes/app_pages.dart';
 import 'app/services/init_services.dart';
 import 'app/theme/app_theme.dart';
+import 'app/translations/app_translations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -73,6 +73,9 @@ class MyApp extends StatelessWidget {
           getPages: AppPages.routes,
           defaultTransition: Transition.fade,
           transitionDuration: const Duration(milliseconds: 300),
+          translations: AppTranslations(),
+          locale: Get.deviceLocale ?? const Locale('zh', 'CN'),
+          fallbackLocale: const Locale('en', 'US'),
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,

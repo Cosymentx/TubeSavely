@@ -5,6 +5,8 @@ import 'package:path_provider/path_provider.dart';
 import '../data/providers/storage_provider.dart';
 import '../utils/logger.dart';
 import '../utils/utils.dart';
+import 'video_processing/desktop_video_processing_service.dart';
+import 'video_processing/ffmpeg_installer_service.dart';
 import 'video_processing/video_processing_service.dart';
 import 'video_processing/video_processing_factory.dart';
 
@@ -160,11 +162,6 @@ class VideoConverterService extends GetxService {
     final isAvailable = await _videoProcessingService.isAvailable();
     Logger.d('Video processing service available: $isAvailable');
 
-    if (!isAvailable) {
-      Logger.w('Video processing service is not available on this platform');
-      Utils.showSnackbar('提示', '视频处理服务在当前平台不可用，部分功能可能受限');
-    }
-
     // 加载已有的转换任务
     _loadTasks();
 
@@ -189,6 +186,18 @@ class VideoConverterService extends GetxService {
       final sourceFile = File(sourceFilePath);
       if (!await sourceFile.exists()) {
         throw Exception('Source file does not exist: $sourceFilePath');
+      }
+
+      // 检查 FFmpeg 环境是否就绪，未安装则弹出友好引导
+      final isAvailable = await _videoProcessingService.isAvailable();
+      if (!isAvailable) {
+        if (_videoProcessingService is DesktopVideoProcessingService) {
+          final installed = await (_videoProcessingService as DesktopVideoProcessingService).promptInstallFFmpeg();
+          if (!installed) {
+            Utils.showSnackbar('tips'.tr, 'ffmpeg_not_found'.tr);
+            return null;
+          }
+        }
       }
 
       // 创建唯一ID
@@ -220,7 +229,7 @@ class VideoConverterService extends GetxService {
       return task;
     } catch (e) {
       Logger.e('Error creating conversion task: $e');
-      Utils.showSnackbar('转换失败', '创建转换任务时出错: $e', isError: true);
+      Utils.showSnackbar('convert_failed'.tr, e.toString(), isError: true);
       return null;
     }
   }
@@ -498,14 +507,23 @@ class VideoConverterService extends GetxService {
       );
       await _updateTask(updatedTask);
 
+      final fileName = sourceFile.path.split(Platform.pathSeparator).last;
+
       // 通知用户转换开始
-      Utils.showSnackbar('转换开始', '开始转换 ${sourceFile.path.split('/').last}');
+      Utils.showSnackbar('convert_start'.tr, 'convert_start_msg'.trParams({'name': fileName}));
 
       // 设置当前任务ID
       _currentTaskId = task.id;
 
+      // 智能判断是否支持 Stream Copy 极速直通
+      final isCopyStream = _canUseStreamCopy(task, mediaInfo);
+      if (isCopyStream) {
+        Logger.i('Stream Copy remuxing enabled for task ${task.id}');
+        Utils.showSnackbar('tips'.tr, 'convert_stream_copy_hint'.tr);
+      }
+
       // 准备转换选项
-      final Map<String, dynamic> options = _buildConversionOptions(task);
+      final Map<String, dynamic> options = _buildConversionOptions(task, mediaInfo: mediaInfo);
 
       // 执行视频转换
       final outputPath = await _videoProcessingService.convertVideo(
@@ -516,12 +534,12 @@ class VideoConverterService extends GetxService {
           // 进度回调
           if (duration > 0) {
             final clampedProgress = progress.clamp(0.0, 100.0) / 100.0;
+            final progressPct = (clampedProgress * 100).toStringAsFixed(1);
 
             // 更新任务进度
             final progressTask = updatedTask.copyWith(
               progress: clampedProgress,
-              statusMessage:
-                  '正在转换: ${(clampedProgress * 100).toStringAsFixed(1)}%',
+              statusMessage: 'convert_converting_status'.trParams({'progress': progressPct}),
               updatedAt: DateTime.now(),
             );
 
@@ -530,8 +548,7 @@ class VideoConverterService extends GetxService {
             await _updateTask(progressTask);
 
             // 打印转换进度
-            Logger.d(
-                'Conversion progress: ${(clampedProgress * 100).toStringAsFixed(1)}% for task ${task.id}');
+            Logger.d('Conversion progress: $progressPct% for task ${task.id}');
           }
         },
         onFailure: (error) async {
@@ -550,8 +567,7 @@ class VideoConverterService extends GetxService {
           await _updateTask(failedTask);
 
           Logger.e('Video conversion error: ${error.toString()}');
-          Utils.showSnackbar('转换失败', '视频转换出错: ${error.toString()}',
-              isError: true);
+          Utils.showSnackbar('convert_failed'.tr, 'Error: ${error.toString()}', isError: true);
 
           // 处理下一个任务
           isConverting.value = false;
@@ -595,8 +611,8 @@ class VideoConverterService extends GetxService {
           await _updateTask(completedTask);
 
           // 通知用户转换完成
-          Utils.showSnackbar(
-              '转换完成', '视频已转换完成: ${outputFile.path.split('/').last}');
+          final outFileName = outputFile.path.split(Platform.pathSeparator).last;
+          Utils.showSnackbar('convert_success'.tr, 'convert_success_msg'.trParams({'name': outFileName}));
         } else {
           // 输出文件不存在或为空
           final failedTask = updatedTask.copyWith(
@@ -608,7 +624,7 @@ class VideoConverterService extends GetxService {
           await _updateTask(failedTask);
 
           Logger.e('Output file does not exist or is empty: $outputPath');
-          Utils.showSnackbar('转换失败', '输出文件不存在或为空，请检查存储空间', isError: true);
+          Utils.showSnackbar('convert_failed'.tr, 'convert_output_empty'.tr, isError: true);
         }
       } else {
         // 转换失败
@@ -621,7 +637,7 @@ class VideoConverterService extends GetxService {
         await _updateTask(failedTask);
 
         Logger.e('Conversion failed with null output path');
-        Utils.showSnackbar('转换失败', '视频转换失败', isError: true);
+        Utils.showSnackbar('convert_failed'.tr, 'convert_failed'.tr, isError: true);
       }
 
       // 处理下一个任务
@@ -632,16 +648,16 @@ class VideoConverterService extends GetxService {
     } catch (e) {
       Logger.e('Error converting video: $e');
 
-      // 提供更友好的错误信息
-      String userFriendlyError = '视频转换失败';
+      // 提供更友好的多语言错误信息
+      String userFriendlyError = 'convert_failed'.tr;
       if (e.toString().contains('Source file does not exist')) {
-        userFriendlyError = '源文件不存在';
+        userFriendlyError = 'convert_source_not_found'.tr;
       } else if (e.toString().contains('Source file is empty')) {
-        userFriendlyError = '源文件为空';
+        userFriendlyError = 'convert_source_empty'.tr;
       } else if (e.toString().contains('Source file is not readable')) {
-        userFriendlyError = '无法读取源文件，请检查权限';
+        userFriendlyError = 'convert_source_unreadable'.tr;
       } else if (e.toString().contains('Target directory is not writable')) {
-        userFriendlyError = '无法写入目标目录，请检查权限';
+        userFriendlyError = 'convert_target_unwritable'.tr;
       }
 
       // 更新任务状态为失败
@@ -654,7 +670,7 @@ class VideoConverterService extends GetxService {
       await _updateTask(failedTask);
 
       // 通知用户转换失败
-      Utils.showSnackbar('转换失败', userFriendlyError, isError: true);
+      Utils.showSnackbar('convert_failed'.tr, userFriendlyError, isError: true);
 
       // 处理下一个任务
       isConverting.value = false;
@@ -664,8 +680,73 @@ class VideoConverterService extends GetxService {
     }
   }
 
+  /// 判断当前任务是否能够采用 Stream Copy 极速直通复用模式
+  bool _canUseStreamCopy(ConversionTask task, Map<String, dynamic>? mediaInfo) {
+    if (mediaInfo == null) return false;
+
+    final targetFormat = task.format.toLowerCase();
+    // 仅针对常见主流支持直通的通用封装格式
+    if (!['mp4', 'mkv', 'mov'].contains(targetFormat)) {
+      return false;
+    }
+
+    final sourceVideoCodec = mediaInfo['codec']?.toString().toLowerCase() ?? '';
+    final sourceAudioCodec = mediaInfo['audioCodec']?.toString().toLowerCase() ?? '';
+
+    // 视频流编码需为 H.264 或 HEVC/H.265
+    final isVideoCompatible = sourceVideoCodec.contains('h264') ||
+        sourceVideoCodec.contains('avc') ||
+        sourceVideoCodec.contains('hevc') ||
+        sourceVideoCodec.contains('h265');
+
+    if (!isVideoCompatible) return false;
+
+    // 音频流编码为 AAC 或 MP3
+    final isAudioCompatible = sourceAudioCodec.isEmpty ||
+        sourceAudioCodec.contains('aac') ||
+        sourceAudioCodec.contains('mp3');
+
+    if (!isAudioCompatible) return false;
+
+    // 分辨率检查：如果源视频高度与目标分辨率预设高度基本一致（误差不超过 32 像素），则无需重采样缩放
+    final sourceHeight = int.tryParse(mediaInfo['height']?.toString() ?? '0') ?? 0;
+    if (sourceHeight > 0) {
+      int targetHeight = 720;
+      switch (task.resolution) {
+        case '480p':
+          targetHeight = 480;
+          break;
+        case '720p':
+          targetHeight = 720;
+          break;
+        case '1080p':
+          targetHeight = 1080;
+          break;
+        case '2K':
+          targetHeight = 1440;
+          break;
+        case '4K':
+          targetHeight = 2160;
+          break;
+      }
+
+      if ((sourceHeight - targetHeight).abs() > 32) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   /// 构建转换选项
-  Map<String, dynamic> _buildConversionOptions(ConversionTask task) {
+  Map<String, dynamic> _buildConversionOptions(ConversionTask task, {Map<String, dynamic>? mediaInfo}) {
+    // 1. 若满足直通条件，直接返回 copyStream
+    if (_canUseStreamCopy(task, mediaInfo)) {
+      return {
+        'copyStream': true,
+      };
+    }
+
     // 解析分辨率
     int width, height;
     switch (task.resolution) {
@@ -695,19 +776,21 @@ class VideoConverterService extends GetxService {
         break;
     }
 
-    // 创建选项映射
+    // 创建选项映射，默认预设从 medium 优化为 faster，大幅提升转换性能
     final Map<String, dynamic> options = {
       'width': width,
       'height': height,
       'videoBitrate': '${task.bitrate}k',
       'audioBitrate': '128k',
-      'preset': 'medium',
+      'preset': 'faster',
     };
+
+    final isMac = Platform.isMacOS;
 
     // 根据格式设置不同的编码器
     switch (task.format.toLowerCase()) {
       case 'mp4':
-        options['videoCodec'] = 'libx264';
+        options['videoCodec'] = isMac ? 'h264_videotoolbox' : 'libx264';
         options['audioCodec'] = 'aac';
         options['profile'] = 'high';
         options['level'] = '4.0';
@@ -727,7 +810,7 @@ class VideoConverterService extends GetxService {
         options['extractAudio'] = false;
         break;
       case 'mkv':
-        options['videoCodec'] = 'libx265';
+        options['videoCodec'] = isMac ? 'hevc_videotoolbox' : 'libx265';
         options['audioCodec'] = 'aac';
         options['crf'] = 23;
         break;
@@ -737,7 +820,7 @@ class VideoConverterService extends GetxService {
         options['quality'] = 5;
         break;
       case 'mov':
-        options['videoCodec'] = 'libx264';
+        options['videoCodec'] = isMac ? 'h264_videotoolbox' : 'libx264';
         options['audioCodec'] = 'aac';
         options['profile'] = 'high';
         break;
@@ -770,9 +853,9 @@ class VideoConverterService extends GetxService {
         options['audioSampleRate'] = 44100;
         break;
       default:
-        options['videoCodec'] = 'libx264';
+        options['videoCodec'] = isMac ? 'h264_videotoolbox' : 'libx264';
         options['audioCodec'] = 'aac';
-        options['preset'] = 'medium';
+        options['preset'] = 'faster';
         break;
     }
 

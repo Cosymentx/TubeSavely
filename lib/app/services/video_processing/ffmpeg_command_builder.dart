@@ -14,6 +14,8 @@ class FFmpegCommandBuilder {
   }) {
     final List<String> args = [
       '-hide_banner',
+      '-threads',
+      '0', // 自动利用所有 CPU 核心并行编码
       '-y', // 覆盖输出文件
       '-i',
       sourcePath,

@@ -6,7 +6,9 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import '../data/models/video_compress_model.dart';
 import '../utils/logger.dart';
+import '../widgets/ffmpeg_install_dialog.dart';
 import 'video_processing/ffmpeg_command_builder.dart';
+import 'video_processing/ffmpeg_installer_service.dart';
 
 /// 视频压缩核心服务
 class VideoCompressService extends GetxService {
@@ -27,46 +29,10 @@ class VideoCompressService extends GetxService {
 
   /// 初始化并检测系统中的 FFmpeg / FFprobe
   Future<bool> initEnvironment() async {
-    if (_isInitialized && _ffmpegPath != null) return true;
-
     try {
-      if (Platform.isWindows) {
-        final ffmpegRes = await Process.run('where', ['ffmpeg']);
-        if (ffmpegRes.exitCode == 0 && ffmpegRes.stdout.toString().trim().isNotEmpty) {
-          _ffmpegPath = ffmpegRes.stdout.toString().trim().split('\r\n').first;
-        }
-        final ffprobeRes = await Process.run('where', ['ffprobe']);
-        if (ffprobeRes.exitCode == 0 && ffprobeRes.stdout.toString().trim().isNotEmpty) {
-          _ffprobePath = ffprobeRes.stdout.toString().trim().split('\r\n').first;
-        }
-      } else {
-        // macOS / Linux
-        final ffmpegRes = await Process.run('which', ['ffmpeg']);
-        if (ffmpegRes.exitCode == 0 && ffmpegRes.stdout.toString().trim().isNotEmpty) {
-          _ffmpegPath = ffmpegRes.stdout.toString().trim().split('\n').first;
-        } else {
-          // 常见 fallback 路径 (如 Homebrew)
-          for (final path in ['/opt/homebrew/bin/ffmpeg', '/usr/local/bin/ffmpeg', '/usr/bin/ffmpeg']) {
-            if (await File(path).exists()) {
-              _ffmpegPath = path;
-              break;
-            }
-          }
-        }
-
-        final ffprobeRes = await Process.run('which', ['ffprobe']);
-        if (ffprobeRes.exitCode == 0 && ffprobeRes.stdout.toString().trim().isNotEmpty) {
-          _ffprobePath = ffprobeRes.stdout.toString().trim().split('\n').first;
-        } else {
-          for (final path in ['/opt/homebrew/bin/ffprobe', '/usr/local/bin/ffprobe', '/usr/bin/ffprobe']) {
-            if (await File(path).exists()) {
-              _ffprobePath = path;
-              break;
-            }
-          }
-        }
-      }
-
+      final installer = FFmpegInstallerService();
+      _ffmpegPath = await installer.getFFmpegPath();
+      _ffprobePath = await installer.getFFprobePath();
       _isInitialized = true;
       Logger.d('VideoCompressService initialized: ffmpeg=$_ffmpegPath, ffprobe=$_ffprobePath');
       return _ffmpegPath != null;
@@ -75,6 +41,27 @@ class VideoCompressService extends GetxService {
       _isInitialized = true;
       return false;
     }
+  }
+
+  /// 弹出友好的安装指引对话框（跨平台适用）
+  Future<bool> promptInstallFFmpeg() async {
+    final installer = FFmpegInstallerService();
+    if (await installer.isFFmpegInstalled()) {
+      await initEnvironment();
+      return true;
+    }
+
+    final result = await Get.dialog<bool>(
+      const FFmpegInstallDialog(),
+      barrierDismissible: false,
+    );
+
+    if (result == true) {
+      _isInitialized = false;
+      await initEnvironment();
+      return _ffmpegPath != null;
+    }
+    return false;
   }
 
   /// 获取默认压缩输出目录
@@ -158,7 +145,10 @@ class VideoCompressService extends GetxService {
     if (_ffmpegPath == null) {
       final ready = await initEnvironment();
       if (!ready || _ffmpegPath == null) {
-        throw Exception('系统未检测到 FFmpeg 工具，请确保已安装或将其添加至系统环境变量。');
+        final installed = await promptInstallFFmpeg();
+        if (!installed || _ffmpegPath == null) {
+          throw Exception('系统未检测到 FFmpeg 工具，需要安装后才能进行视频压缩。');
+        }
       }
     }
 
