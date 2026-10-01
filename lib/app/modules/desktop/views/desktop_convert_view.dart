@@ -158,7 +158,7 @@ class _DesktopConvertViewState extends State<DesktopConvertView>
                   itemCount: tasks.length,
                   itemBuilder: (context, index) {
                     final task = tasks[index];
-                    return _buildTaskCard(task);
+                    return _buildTaskCard(task, key: ValueKey(task.id));
                   },
                 );
               }),
@@ -215,13 +215,16 @@ class _DesktopConvertViewState extends State<DesktopConvertView>
     );
   }
 
-  Widget _buildTaskCard(ConversionTask task) {
+  Widget _buildTaskCard(ConversionTask task, {Key? key}) {
     final theme = Theme.of(context);
     final primaryColor = theme.primaryColor;
     final fileName = task.sourceFilePath.split(Platform.pathSeparator).last;
     final isConverting = task.status == ConversionStatus.converting;
+    final isCompleted = task.status == ConversionStatus.completed;
+    final isFailed = task.status == ConversionStatus.failed;
 
     return Container(
+      key: key,
       margin: const EdgeInsets.only(bottom: 12),
       height: 94,
       decoration: BoxDecoration(
@@ -278,12 +281,24 @@ class _DesktopConvertViewState extends State<DesktopConvertView>
                     ),
                   ),
                   Text(
-                    task.sourceFilePath,
+                    isFailed
+                        ? '${'convert_failed'.tr}: ${task.errorMessage ?? ""}'
+                        : (isCompleted
+                            ? 'convert_success'.tr
+                            : (isConverting
+                                ? ((task.statusMessage?.isNotEmpty ?? false)
+                                    ? task.statusMessage!
+                                    : 'converting'.tr)
+                                : (task.sourceFilePath ?? ''))),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 11,
-                      color: theme.colorScheme.onSurface.withOpacity(0.45),
+                      color: isFailed
+                          ? Colors.red.shade600
+                          : (isCompleted
+                              ? Colors.green.shade600
+                              : theme.colorScheme.onSurface.withOpacity(0.45)),
                     ),
                   ),
                   Row(
@@ -292,16 +307,20 @@ class _DesktopConvertViewState extends State<DesktopConvertView>
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(4),
                           child: LinearProgressIndicator(
-                            value: task.progress,
+                            value: isCompleted ? 1.0 : task.progress,
                             minHeight: 2.5,
                             backgroundColor: primaryColor.withOpacity(0.15),
-                            valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              isFailed ? Colors.red : (isCompleted ? Colors.green : primaryColor),
+                            ),
                           ),
                         ),
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        '${(task.progress * 100).toStringAsFixed(0)}%',
+                        isCompleted
+                            ? '100%'
+                            : '${(task.progress * 100).toStringAsFixed(0)}%',
                         style: TextStyle(
                           fontSize: 11,
                           color: theme.colorScheme.onSurface.withOpacity(0.55),
@@ -320,17 +339,27 @@ class _DesktopConvertViewState extends State<DesktopConvertView>
             mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
-                iconSize: 20,
-                splashRadius: 18,
+                iconSize: 24,
+                splashRadius: 22,
+                tooltip: isConverting
+                    ? 'cancel'.tr
+                    : (isFailed ? 'retry'.tr : (isCompleted ? 'completed'.tr : 'convert_now'.tr)),
                 icon: isConverting
                     ? SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: primaryColor),
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2.2, color: primaryColor),
                       )
-                    : Icon(Icons.cached_outlined, color: primaryColor),
+                    : Icon(
+                        isCompleted
+                            ? Icons.check_circle_outline
+                            : (isFailed ? Icons.replay : Icons.play_arrow_rounded),
+                        color: isCompleted
+                            ? Colors.green.shade600
+                            : (isFailed ? Colors.red.shade600 : primaryColor),
+                      ),
                 onPressed: isConverting
-                    ? null
+                    ? () => _converterService.cancelTask(task.id)
                     : () {
                         _converterService.createTask(
                           sourceFilePath: task.sourceFilePath,
@@ -341,20 +370,22 @@ class _DesktopConvertViewState extends State<DesktopConvertView>
                       },
               ),
               IconButton(
-                iconSize: 20,
-                splashRadius: 18,
+                iconSize: 24,
+                splashRadius: 22,
+                tooltip: '打开所在目录',
                 icon: Icon(
                   Icons.folder_open,
-                  color: theme.colorScheme.onSurface.withOpacity(0.5),
+                  color: theme.colorScheme.onSurface.withOpacity(0.65),
                 ),
                 onPressed: () => _openFileDirectory(task.targetFilePath),
               ),
               IconButton(
-                iconSize: 20,
-                splashRadius: 18,
+                iconSize: 24,
+                splashRadius: 22,
+                tooltip: 'delete',
                 icon: Icon(
                   Icons.delete_outline,
-                  color: theme.colorScheme.onSurface.withOpacity(0.5),
+                  color: theme.colorScheme.onSurface.withOpacity(0.65),
                 ),
                 onPressed: () {
                   _converterService.deleteTask(task.id, deleteFile: false);

@@ -27,9 +27,9 @@ class UserService extends GetxService {
     final token = _storageProvider.getUserToken();
     isLoggedIn.value = token != null && token.isNotEmpty;
 
-    // 如果已登录，获取用户信息
+    // 如果已登录，异步获取用户信息，不阻塞启动
     if (isLoggedIn.value) {
-      await getUserInfo();
+      getUserInfo();
     }
 
     return this;

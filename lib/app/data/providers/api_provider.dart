@@ -36,10 +36,11 @@ class ApiProvider extends GetConnect {
     httpClient.addResponseModifier<dynamic>((request, response) {
       // 处理响应
       if (response.status.isUnauthorized) {
-        // 处理401未授权错误
-        // 例如：清除本地令牌并重定向到登录页面
+        // 处理401未授权错误：清除本地令牌，仅在移动端重定向
         _storage.remove(Constants.STORAGE_USER_TOKEN);
-        Get.offAllNamed('/login');
+        if (GetPlatform.isMobile) {
+          Get.offAllNamed('/login');
+        }
       }
 
       return response;
@@ -143,8 +144,8 @@ class ApiProvider extends GetConnect {
   ///
   /// [url] 视频链接
   Future<Response<dynamic>> parseVideo(String url) {
-    Logger.d('Parsing video from ${Constants.PARSE_API_BASE_URL}: $url');
-    return httpClient.get('${Constants.PARSE_API_BASE_URL}/parse', query: {'url': url});
+    Logger.d('Parsing video from ${Constants.API_BASE_URL}: $url');
+    return get('/api/v1/videos/parse', query: {'url': url});
   }
 
   /// 获取视频信息

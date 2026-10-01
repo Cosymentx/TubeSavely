@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../data/providers/storage_provider.dart';
+import '../../../utils/constants.dart';
 import '../widgets/desktop_dialog_wrapper.dart';
 import 'desktop_about_dialog.dart';
 
@@ -275,7 +276,7 @@ class _DesktopSettingDialogState extends State<DesktopSettingDialog> {
         const SizedBox(height: 6),
 
         _buildLinkItem('visit_website'.tr, () {
-          launchUrl(Uri.parse('https://tubesavely.com'), mode: LaunchMode.externalApplication);
+          launchUrl(Uri.parse(Constants.WEB_URL), mode: LaunchMode.externalApplication);
         }),
         _buildLinkItem('privacy_policy'.tr, () {
           launchUrl(Uri.parse('https://tubesavely.com/privacy'), mode: LaunchMode.externalApplication);

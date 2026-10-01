@@ -376,11 +376,13 @@ class VideoConverterService extends GetxService {
   }
 
   /// 更新任务
-  Future<void> _updateTask(ConversionTask task) async {
+  Future<void> _updateTask(ConversionTask task, {bool saveToStorage = true}) async {
     final index = conversionTasks.indexWhere((t) => t.id == task.id);
     if (index != -1) {
       conversionTasks[index] = task;
-      await _storageProvider.updateConversionTask(task);
+      if (saveToStorage) {
+        await _storageProvider.updateConversionTask(task);
+      }
     }
   }
 
@@ -526,6 +528,7 @@ class VideoConverterService extends GetxService {
       final Map<String, dynamic> options = _buildConversionOptions(task, mediaInfo: mediaInfo);
 
       // 执行视频转换
+      DateTime lastProgressTime = DateTime.now();
       final outputPath = await _videoProcessingService.convertVideo(
         task.sourceFilePath,
         task.targetFilePath,
@@ -534,18 +537,25 @@ class VideoConverterService extends GetxService {
           // 进度回调
           if (duration > 0) {
             final clampedProgress = progress.clamp(0.0, 100.0) / 100.0;
+            final now = DateTime.now();
+            // 节流控制：间隔小于 250ms 且非完成状态时跳过，避免高频刷新导致界面闪烁
+            if (now.difference(lastProgressTime).inMilliseconds < 250 && clampedProgress < 1.0) {
+              return;
+            }
+            lastProgressTime = now;
+
             final progressPct = (clampedProgress * 100).toStringAsFixed(1);
 
             // 更新任务进度
             final progressTask = updatedTask.copyWith(
               progress: clampedProgress,
               statusMessage: 'convert_converting_status'.trParams({'progress': progressPct}),
-              updatedAt: DateTime.now(),
+              updatedAt: now,
             );
 
-            // 更新任务状态
+            // 更新任务状态（仅更新内存，不频繁写磁盘）
             updatedTask = progressTask;
-            await _updateTask(progressTask);
+            await _updateTask(progressTask, saveToStorage: false);
 
             // 打印转换进度
             Logger.d('Conversion progress: $progressPct% for task ${task.id}');

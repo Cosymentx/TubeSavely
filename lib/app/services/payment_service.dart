@@ -54,8 +54,8 @@ class PaymentService extends GetxService {
       isApplePayAvailable.value = false;
     }
 
-    // 加载商品列表
-    await loadProducts();
+    // 异步加载商品列表，不阻塞应用启动渲染
+    loadProducts();
 
     return this;
   }
