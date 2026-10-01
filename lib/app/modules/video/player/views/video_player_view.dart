@@ -5,6 +5,7 @@ import 'package:media_kit_video/media_kit_video.dart';
 import 'package:tubesavely/app/services/video_player_service.dart';
 import 'package:tubesavely/app/theme/app_colors.dart';
 import 'package:tubesavely/app/theme/app_text_styles.dart';
+import 'package:tubesavely/app/widgets/adaptive/adaptive_scaffold.dart';
 
 import '../controllers/video_player_controller.dart';
 
@@ -29,7 +30,7 @@ class VideoPlayerView extends GetView<VideoPlayerController> {
         SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
       }
 
-      return Scaffold(
+      return AdaptiveScaffold(
         backgroundColor: Colors.black,
         appBar: null, // 移除顶部AppBar，只使用视频控制器中的顶部控制栏
         body: _buildBody(),

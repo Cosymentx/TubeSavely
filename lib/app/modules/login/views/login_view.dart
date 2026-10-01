@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import '../../../widgets/adaptive/adaptive_scaffold.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_text_styles.dart';
 import '../controllers/login_controller.dart';
+
+import 'package:flutter/cupertino.dart';
 
 /// 登录页面
 class LoginView extends GetView<LoginController> {
@@ -11,13 +14,22 @@ class LoginView extends GetView<LoginController> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AdaptiveScaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: AppColors.textPrimary),
           onPressed: () => Get.back(),
+        ),
+      ),
+      cupertinoNavBar: CupertinoNavigationBar(
+        backgroundColor: Colors.transparent,
+        border: null,
+        leading: CupertinoButton(
+          padding: EdgeInsets.zero,
+          onPressed: () => Get.back(),
+          child: const Icon(CupertinoIcons.back),
         ),
       ),
       body: SafeArea(

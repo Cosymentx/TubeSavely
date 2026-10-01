@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../../widgets/adaptive/adaptive_scaffold.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:tubesavely/app/data/models/payment_model.dart';
 import '../controllers/developer_controller.dart';
@@ -7,13 +8,15 @@ import '../../../routes/app_pages.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_text_styles.dart';
 
+import 'package:flutter/cupertino.dart';
+
 /// 开发者测试页面
 class DeveloperView extends GetView<DeveloperController> {
   const DeveloperView({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AdaptiveScaffold(
       appBar: AppBar(
         title: Text(
           '开发者测试',
@@ -21,6 +24,9 @@ class DeveloperView extends GetView<DeveloperController> {
         ),
         centerTitle: true,
         elevation: 0,
+      ),
+      cupertinoNavBar: const CupertinoNavigationBar(
+        middle: Text('开发者测试'),
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(16.w),

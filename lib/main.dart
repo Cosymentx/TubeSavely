@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:get/get.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:window_manager/window_manager.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:get/get.dart';
+import 'package:path/path.dart';
+import 'package:window_manager/window_manager.dart';
+
 import 'app/routes/app_pages.dart';
-import 'app/theme/app_theme.dart';
 import 'app/services/init_services.dart';
+import 'app/theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,8 +41,7 @@ void main() async {
       center: true,
       backgroundColor: Colors.transparent,
       skipTaskbar: false,
-      titleBarStyle:
-          GetPlatform.isMacOS ? TitleBarStyle.hidden : TitleBarStyle.normal,
+      titleBarStyle: GetPlatform.isMacOS ? TitleBarStyle.hidden : TitleBarStyle.normal,
     );
 
     await windowManager.waitUntilReadyToShow(windowOptions, () async {
@@ -58,7 +59,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ScreenUtilInit(
-      designSize: const Size(360, 690), // 更适合现代设备的设计尺寸
+      designSize: const Size(360, 690),
       minTextAdapt: true,
       splitScreenMode: true,
       builder: (context, child) {

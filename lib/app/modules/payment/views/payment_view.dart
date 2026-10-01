@@ -1,19 +1,22 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../../widgets/adaptive/adaptive_scaffold.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:tubesavely/app/data/models/payment_model.dart';
 import 'package:tubesavely/app/theme/app_colors.dart';
 import 'package:tubesavely/app/theme/app_text_styles.dart';
 import 'package:tubesavely/app/utils/utils.dart';
+import '../../../utils/platform_util.dart';
 import '../controllers/payment_controller.dart';
+
+import 'package:flutter/cupertino.dart';
 
 class PaymentView extends GetView<PaymentController> {
   const PaymentView({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AdaptiveScaffold(
       appBar: AppBar(
         title: Text(
           '会员与积分',
@@ -28,6 +31,14 @@ class PaymentView extends GetView<PaymentController> {
             tooltip: '交易记录',
           ),
         ],
+      ),
+      cupertinoNavBar: CupertinoNavigationBar(
+        middle: const Text('会员与积分'),
+        trailing: CupertinoButton(
+          padding: EdgeInsets.zero,
+          onPressed: controller.viewTransactionHistory,
+          child: const Icon(CupertinoIcons.doc_text, size: 22),
+        ),
       ),
       body: Column(
         children: [
@@ -324,13 +335,13 @@ class PaymentView extends GetView<PaymentController> {
           spacing: 8.w,
           runSpacing: 8.h,
           children: [
-            if (Platform.isIOS || Platform.isMacOS)
+            if (PlatformUtil.isIOS)
               _buildPaymentMethodItem(
                 'Apple Pay',
                 'assets/images/apple_pay.png',
                 PaymentMethod.applePay,
               ),
-            if (Platform.isAndroid)
+            if (PlatformUtil.isAndroid)
               _buildPaymentMethodItem(
                 'Google Pay',
                 'assets/images/google_pay.png',

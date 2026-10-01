@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import '../../../widgets/adaptive/adaptive_scaffold.dart';
 
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_text_styles.dart';
 import '../../../utils/utils.dart';
 import '../controllers/profile_controller.dart';
+
+import 'package:flutter/cupertino.dart';
 
 /// 用户信息页面
 class ProfileView extends GetView<ProfileController> {
@@ -13,7 +16,7 @@ class ProfileView extends GetView<ProfileController> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AdaptiveScaffold(
       appBar: AppBar(
         title: Text(
           '个人中心',
@@ -28,6 +31,14 @@ class ProfileView extends GetView<ProfileController> {
           ),
         ],
       ),
+      cupertinoNavBar: CupertinoNavigationBar(
+        middle: const Text('个人中心'),
+        trailing: CupertinoButton(
+          padding: EdgeInsets.zero,
+          onPressed: controller.goToSettings,
+          child: const Icon(CupertinoIcons.settings, size: 22),
+        ),
+      ),
       body: RefreshIndicator(
         onRefresh: controller.refreshUserInfo,
         child: SingleChildScrollView(
@@ -36,8 +47,8 @@ class ProfileView extends GetView<ProfileController> {
             children: [
               _buildUserHeader(),
               SizedBox(height: 16.h),
-              _buildAccountInfo(),
-              SizedBox(height: 16.h),
+              // _buildAccountInfo(),
+              // SizedBox(height: 16.h),
               _buildFunctionList(),
               SizedBox(height: 16.h),
               _buildAboutSection(),

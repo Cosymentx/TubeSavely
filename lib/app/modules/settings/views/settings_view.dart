@@ -1,69 +1,84 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../routes/app_pages.dart';
 import '../controllers/settings_controller.dart';
 import '../../../theme/app_theme.dart';
+import '../../../widgets/adaptive/adaptive_scaffold.dart';
 
 class SettingsView extends GetView<SettingsController> {
   const SettingsView({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          '设置',
-          style: TextStyle(
-            fontSize: 18.sp,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        centerTitle: true,
-        elevation: 0,
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildSectionTitle('外观设置'),
-              SizedBox(height: 8.h),
-              _buildThemeSettings(),
-              SizedBox(height: 8.h),
-              _buildLanguageSettings(),
-              SizedBox(height: 16.h),
-              _buildSectionTitle('下载设置'),
-              SizedBox(height: 8.h),
-              _buildDownloadPathSettings(),
-              SizedBox(height: 8.h),
-              _buildWifiOnlySettings(),
-              SizedBox(height: 8.h),
-              _buildAutoDownloadSettings(),
-              SizedBox(height: 8.h),
-              _buildNotificationSettings(),
-              SizedBox(height: 16.h),
-              _buildSectionTitle('视频设置'),
-              SizedBox(height: 8.h),
-              _buildVideoQualitySettings(),
-              SizedBox(height: 8.h),
-              _buildVideoFormatSettings(),
-              SizedBox(height: 8.h),
-              _buildVideoConvertSettings(),
-              SizedBox(height: 16.h),
-              _buildSectionTitle('存储'),
-              SizedBox(height: 8.h),
-              _buildCacheSettings(),
-              SizedBox(height: 16.h),
-              _buildSectionTitle('关于'),
-              SizedBox(height: 8.h),
-              _buildAboutSettings(),
-              SizedBox(height: 32.h),
-            ],
+    return AdaptiveScaffold(
+      appBar: _buildAppBar(),
+      cupertinoNavBar: _buildCupertinoNavBar(),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildSectionTitle('外观设置'),
+                SizedBox(height: 8.h),
+                _buildThemeSettings(),
+                SizedBox(height: 8.h),
+                _buildLanguageSettings(),
+                SizedBox(height: 16.h),
+                _buildSectionTitle('下载设置'),
+                SizedBox(height: 8.h),
+                _buildDownloadPathSettings(),
+                SizedBox(height: 8.h),
+                _buildWifiOnlySettings(),
+                SizedBox(height: 8.h),
+                _buildAutoDownloadSettings(),
+                SizedBox(height: 8.h),
+                _buildNotificationSettings(),
+                SizedBox(height: 16.h),
+                _buildSectionTitle('视频设置'),
+                SizedBox(height: 8.h),
+                _buildVideoQualitySettings(),
+                SizedBox(height: 8.h),
+                _buildVideoFormatSettings(),
+                SizedBox(height: 8.h),
+                _buildVideoConvertSettings(),
+                SizedBox(height: 16.h),
+                _buildSectionTitle('存储'),
+                SizedBox(height: 8.h),
+                _buildCacheSettings(),
+                SizedBox(height: 16.h),
+                _buildSectionTitle('关于'),
+                SizedBox(height: 8.h),
+                _buildAboutSettings(),
+                SizedBox(height: 32.h),
+              ],
+            ),
           ),
         ),
       ),
+    );
+  }
+
+  CupertinoNavigationBar _buildCupertinoNavBar() {
+    return const CupertinoNavigationBar(
+      middle: Text('设置'),
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      title: Text(
+        '设置',
+        style: TextStyle(
+          fontSize: 18.sp,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      centerTitle: true,
+      elevation: 0,
     );
   }
 

@@ -1,70 +1,111 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../controllers/tasks_controller.dart';
 import '../../../theme/app_theme.dart';
-import '../../../data/models/download_task_model.dart';
 import '../../../theme/app_text_styles.dart';
+import '../../../data/models/download_task_model.dart';
+import '../../../widgets/adaptive/adaptive_scaffold.dart';
+import '../../../widgets/adaptive/adaptive_dialog.dart';
+import '../../../widgets/empty_state.dart';
 
 class TasksView extends GetView<TasksController> {
   const TasksView({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          '下载任务',
-          style: AppTextStyles.titleLarge,
+    return AdaptiveScaffold(
+      appBar: _buildAppBar(),
+      cupertinoNavBar: _buildCupertinoNavBar(),
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildTaskStats(),
+            Expanded(
+              child: _buildTaskList(),
+            ),
+          ],
         ),
-        centerTitle: true,
-        elevation: 0,
-        actions: [
-          Obx(() {
-            if (controller.isEditing.value) {
-              return Row(
-                children: [
-                  IconButton(
-                    icon: Icon(Icons.select_all),
-                    onPressed: controller.selectAll,
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.delete),
-                    onPressed: controller.selectedItems.isNotEmpty
-                        ? controller.deleteSelected
-                        : null,
-                  ),
-                ],
-              );
-            } else {
-              return IconButton(
-                icon: Icon(Icons.edit),
-                onPressed: controller.toggleEditMode,
-              );
-            }
-          }),
-        ],
       ),
-      body: Column(
-        children: [
-          _buildTaskStats(),
-          Expanded(
-            child: _buildTaskList(),
-          ),
-        ],
-      ),
-      floatingActionButton: Obx(() {
+      floatingActionButton: _buildFloatingActionButton(),
+    );
+  }
+
+  CupertinoNavigationBar _buildCupertinoNavBar() {
+    return CupertinoNavigationBar(
+      middle: const Text('下载任务'),
+      trailing: Obx(() {
         if (controller.isEditing.value) {
-          return FloatingActionButton(
-            onPressed: controller.toggleEditMode,
-            backgroundColor: AppTheme.primaryColor,
-            child: Icon(Icons.check),
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CupertinoButton(
+                padding: EdgeInsets.zero,
+                onPressed: controller.selectAll,
+                child: const Icon(CupertinoIcons.checkmark_circle, size: 22),
+              ),
+              SizedBox(width: 8.w),
+              CupertinoButton(
+                padding: EdgeInsets.zero,
+                onPressed: controller.selectedItems.isNotEmpty
+                    ? controller.deleteSelected
+                    : null,
+                child: Icon(
+                  CupertinoIcons.delete,
+                  size: 22,
+                  color: controller.selectedItems.isNotEmpty
+                      ? CupertinoColors.destructiveRed
+                      : CupertinoColors.inactiveGray,
+                ),
+              ),
+            ],
           );
         } else {
-          return SizedBox.shrink();
+          return CupertinoButton(
+            padding: EdgeInsets.zero,
+            onPressed: controller.toggleEditMode,
+            child: const Icon(CupertinoIcons.pencil, size: 22),
+          );
         }
       }),
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      title: Text(
+        '下载任务',
+        style: AppTextStyles.titleLarge,
+      ),
+      centerTitle: true,
+      elevation: 0,
+      actions: [
+        Obx(() {
+          if (controller.isEditing.value) {
+            return Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.select_all),
+                  onPressed: controller.selectAll,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete),
+                  onPressed: controller.selectedItems.isNotEmpty
+                      ? controller.deleteSelected
+                      : null,
+                ),
+              ],
+            );
+          } else {
+            return IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: controller.toggleEditMode,
+            );
+          }
+        }),
+      ],
     );
   }
 
@@ -166,24 +207,11 @@ class TasksView extends GetView<TasksController> {
       }
 
       if (controller.downloadTasks.isEmpty) {
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.download_done,
-                size: 64.sp,
-                color: Get.theme.colorScheme.onBackground.withOpacity(0.3),
-              ),
-              SizedBox(height: 16.h),
-              Text(
-                '暂无下载任务',
-                style: TextStyle(
-                  fontSize: 16.sp,
-                  color: Get.theme.colorScheme.onBackground.withOpacity(0.5),
-                ),
-              ),
-            ],
+        return const Center(
+          child: EmptyState(
+            icon: Icons.download_done_rounded,
+            title: '暂无下载任务',
+            subtitle: '在首页解析视频后即可在此查看下载进度',
           ),
         );
       }
@@ -477,28 +505,30 @@ class TasksView extends GetView<TasksController> {
     }
   }
 
+  // 构建浮动操作按钮
+  FloatingActionButton? _buildFloatingActionButton() {
+    final isEditing = controller.isEditing.value;
+    if (isEditing) {
+      return FloatingActionButton(
+        onPressed: controller.toggleEditMode,
+        backgroundColor: AppTheme.primaryColor,
+        child: Icon(Icons.check),
+      );
+    } else {
+      return null;
+    }
+  }
+
   // 显示删除确认对话框
   void _showDeleteConfirmation(DownloadTaskModel task) {
     Get.dialog(
-      AlertDialog(
-        title: Text('删除任务'),
-        content: Text('确定要删除此下载任务吗？'),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: Text('取消'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Get.back();
-              controller.deleteTask(task.id);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryColor,
-            ),
-            child: Text('确定'),
-          ),
-        ],
+      AdaptiveDialog(
+        title: '删除任务',
+        message: '确定要删除此下载任务吗？',
+        confirmButtonText: '删除',
+        cancelButtonText: '取消',
+        isDangerousAction: true,
+        onConfirm: () => controller.deleteTask(task.id),
       ),
     );
   }

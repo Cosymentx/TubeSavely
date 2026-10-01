@@ -5,8 +5,10 @@ import 'package:get/get.dart';
 
 import '../../../data/models/video_model.dart';
 import '../../../theme/app_colors.dart';
+import '../../../theme/app_spacing.dart';
 import '../../../theme/app_text_styles.dart';
 import '../../../utils/utils.dart';
+import '../../../widgets/adaptive/adaptive_scaffold.dart';
 import '../controllers/home_controller.dart';
 
 class HomeView extends GetView<HomeController> {
@@ -14,34 +16,36 @@ class HomeView extends GetView<HomeController> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(kToolbarHeight),
-        child: _buildAppBar(),
-      ),
+    return AdaptiveScaffold(
       body: SafeArea(
-        // 顶部不需要额外的安全区域，因为已经有AppBar了
         top: false,
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildUrlInput(),
-                SizedBox(height: 24.h),
-                _buildQuickActions(),
-                SizedBox(height: 24.h),
-                _buildTrendingVideos(),
-                SizedBox(height: 24.h),
-                _buildDownloadOptions(),
-                SizedBox(height: 24.h),
-                _buildSupportedPlatforms(),
-                SizedBox(height: 24.h),
-                _buildVideoTools(),
-              ],
-            ),
-          ),
+        child: _buildBody(),
+      ),
+    );
+  }
+
+  Widget _buildBody() {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.lg,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildUrlInput(),
+            SizedBox(height: 24.h),
+            _buildQuickActions(),
+            SizedBox(height: 24.h),
+            _buildTrendingVideos(),
+            SizedBox(height: 24.h),
+            _buildDownloadOptions(),
+            SizedBox(height: 24.h),
+            _buildSupportedPlatforms(),
+            SizedBox(height: 24.h),
+            _buildVideoTools(),
+          ],
         ),
       ),
     );
@@ -50,19 +54,19 @@ class HomeView extends GetView<HomeController> {
   // 视频工具区
   Widget _buildVideoTools() {
     return Container(
-      padding: EdgeInsets.all(16.w),
+      padding: EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: Get.theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16.r),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(13),
+            color: AppColors.primaryLight5,
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
         border: Border.all(
-          color: AppColors.primary.withAlpha(26),
+          color: AppColors.primaryLight10,
           width: 1,
         ),
       ),
@@ -130,12 +134,12 @@ class HomeView extends GetView<HomeController> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: EdgeInsets.all(16.w),
+        padding: EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
           color: Get.theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(12.r),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           border: Border.all(
-            color: AppColors.primary.withAlpha(26),
+            color: AppColors.primaryLight10,
             width: 1,
           ),
         ),
@@ -143,18 +147,18 @@ class HomeView extends GetView<HomeController> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              padding: EdgeInsets.all(8.w),
+              padding: EdgeInsets.all(AppSpacing.sm),
               decoration: BoxDecoration(
-                color: AppColors.primary.withAlpha(25),
-                borderRadius: BorderRadius.circular(8.r),
+                color: AppColors.primaryLight25,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
               ),
               child: Icon(
                 icon,
                 color: AppColors.primary,
-                size: 24.sp,
+                size: AppSpacing.iconMd,
               ),
             ),
-            SizedBox(height: 12.h),
+            SizedBox(height: AppSpacing.md),
             Text(
               title,
               style: TextStyle(
@@ -180,7 +184,6 @@ class HomeView extends GetView<HomeController> {
   Widget _buildAppBar() {
     return AppBar(
       elevation: 0,
-      backgroundColor: Get.theme.colorScheme.surface,
       titleSpacing: 16.w,
       title: Text(
         'TubeSavely',
@@ -225,10 +228,10 @@ class HomeView extends GetView<HomeController> {
     return Obx(() {
       return Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16.r),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withAlpha(26),
+              color: AppColors.primaryLight10,
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -243,17 +246,17 @@ class HomeView extends GetView<HomeController> {
               fontSize: 14.sp,
             ),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16.r),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
               borderSide: BorderSide.none,
             ),
             filled: true,
             fillColor: Get.theme.colorScheme.surface,
             contentPadding: EdgeInsets.symmetric(
-              horizontal: 16.w,
-              vertical: 16.h,
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.lg,
             ),
             suffixIcon: Container(
-              margin: EdgeInsets.all(4.w),
+              margin: EdgeInsets.all(AppSpacing.xs),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
@@ -261,10 +264,10 @@ class HomeView extends GetView<HomeController> {
                     AppColors.accent,
                   ],
                 ),
-                borderRadius: BorderRadius.circular(12.r),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.primary.withAlpha(77),
+                    color: AppColors.primaryLight10,
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -274,8 +277,7 @@ class HomeView extends GetView<HomeController> {
                   ? Padding(
                       padding: EdgeInsets.all(8.w),
                       child: CircularProgressIndicator(
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(AppColors.onPrimary),
+                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.onPrimary),
                         strokeWidth: 2.w,
                       ),
                     )
@@ -461,8 +463,7 @@ class HomeView extends GetView<HomeController> {
             ),
             SizedBox(height: 16.h),
             // 视频信息
-            if (controller.currentVideo.value != null)
-              _buildVideoInfo(controller.currentVideo.value!),
+            if (controller.currentVideo.value != null) _buildVideoInfo(controller.currentVideo.value!),
             SizedBox(height: 16.h),
             // 清晰度选择
             Text(
@@ -822,8 +823,7 @@ class HomeView extends GetView<HomeController> {
                                       child: CircularProgressIndicator(),
                                     ),
                                   ),
-                                  errorWidget: (context, url, error) =>
-                                      Container(
+                                  errorWidget: (context, url, error) => Container(
                                     color: AppColors.surfaceVariant,
                                     child: Icon(
                                       Icons.error,
@@ -843,8 +843,7 @@ class HomeView extends GetView<HomeController> {
                                       ),
                                       decoration: BoxDecoration(
                                         color: Colors.black.withAlpha(179),
-                                        borderRadius:
-                                            BorderRadius.circular(4.r),
+                                        borderRadius: BorderRadius.circular(4.r),
                                       ),
                                       child: Text(
                                         '${video.duration! ~/ 60}:${(video.duration! % 60).toString().padLeft(2, '0')}',

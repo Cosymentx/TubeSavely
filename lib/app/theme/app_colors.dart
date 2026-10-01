@@ -25,6 +25,11 @@ class AppColors {
   // 阴影色
   static const Color shadow = Color(0x1A000000);
 
+  // 颜色透明度变体（用于背景）
+  static const Color primaryLight5 = Color(0x0D3B82F6);   // 5% 不透明度
+  static const Color primaryLight10 = Color(0x1A3B82F6);  // 10% 不透明度
+  static const Color primaryLight25 = Color(0x403B82F6);  // 25% 不透明度
+
   // 浅色主题颜色
   static const Color _lightBackground = Color(0xFFF8FAFC);
   static const Color _lightSurface = Color(0xFFFFFFFF);

@@ -5,6 +5,9 @@ import '../controllers/task_controller.dart';
 import '../../../data/models/task_model.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_text_styles.dart';
+import '../../../widgets/adaptive/adaptive_scaffold.dart';
+
+import 'package:flutter/cupertino.dart';
 
 /// 任务视图
 class TaskView extends GetView<TaskController> {
@@ -12,7 +15,7 @@ class TaskView extends GetView<TaskController> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AdaptiveScaffold(
       appBar: AppBar(
         title: Text(
           '我的任务',
@@ -26,6 +29,14 @@ class TaskView extends GetView<TaskController> {
             onPressed: _showFilterDialog,
           ),
         ],
+      ),
+      cupertinoNavBar: CupertinoNavigationBar(
+        middle: const Text('我的任务'),
+        trailing: CupertinoButton(
+          padding: EdgeInsets.zero,
+          onPressed: _showFilterDialog,
+          child: const Icon(CupertinoIcons.slider_horizontal_3, size: 22),
+        ),
       ),
       body: _buildBody(),
     );

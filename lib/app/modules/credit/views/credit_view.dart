@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../../widgets/adaptive/adaptive_scaffold.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../controllers/credit_controller.dart';
 import '../../../data/models/credit_model.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_text_styles.dart';
+
+import 'package:flutter/cupertino.dart';
 
 /// 积分视图
 class CreditView extends GetView<CreditController> {
@@ -12,7 +15,7 @@ class CreditView extends GetView<CreditController> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AdaptiveScaffold(
       appBar: AppBar(
         title: Text(
           '我的积分',
@@ -20,6 +23,9 @@ class CreditView extends GetView<CreditController> {
         ),
         centerTitle: true,
         elevation: 0,
+      ),
+      cupertinoNavBar: const CupertinoNavigationBar(
+        middle: Text('我的积分'),
       ),
       body: _buildBody(),
     );

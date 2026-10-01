@@ -4,6 +4,9 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../controllers/api_test_controller.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_text_styles.dart';
+import '../../../widgets/adaptive/adaptive_scaffold.dart';
+
+import 'package:flutter/cupertino.dart';
 
 /// API测试页面
 class ApiTestView extends GetView<ApiTestController> {
@@ -11,7 +14,7 @@ class ApiTestView extends GetView<ApiTestController> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AdaptiveScaffold(
       appBar: AppBar(
         title: Text(
           'API测试',
@@ -19,6 +22,9 @@ class ApiTestView extends GetView<ApiTestController> {
         ),
         centerTitle: true,
         elevation: 0,
+      ),
+      cupertinoNavBar: const CupertinoNavigationBar(
+        middle: Text('API测试'),
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(16.w),

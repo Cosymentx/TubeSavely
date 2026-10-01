@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import '../../../widgets/adaptive/adaptive_scaffold.dart';
 import 'package:tubesavely/app/routes/app_pages.dart';
 import 'package:tubesavely/app/utils/utils.dart';
 
@@ -8,15 +9,20 @@ import '../../../theme/app_colors.dart';
 import '../../../theme/app_text_styles.dart';
 import '../controllers/more_controller.dart';
 
+import 'package:flutter/cupertino.dart';
+
 class MoreView extends GetView<MoreController> {
   const MoreView({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AdaptiveScaffold(
       appBar: AppBar(
         title: Text('更多', style: AppTextStyles.titleLarge),
         centerTitle: true,
+      ),
+      cupertinoNavBar: const CupertinoNavigationBar(
+        middle: Text('更多'),
       ),
       body: SingleChildScrollView(
         child: Padding(

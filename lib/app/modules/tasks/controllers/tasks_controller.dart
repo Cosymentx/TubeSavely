@@ -1,79 +1,41 @@
-import 'dart:async';
 import 'package:get/get.dart';
 import '../../../data/models/download_task_model.dart';
 import '../../../data/repositories/download_repository.dart';
+import '../../../services/download_service.dart';
 import '../../../utils/utils.dart';
 import '../../../utils/logger.dart';
 
 class TasksController extends GetxController {
   final DownloadRepository _downloadRepository = Get.find<DownloadRepository>();
-  
-  // 下载任务列表
-  final RxList<DownloadTaskModel> downloadTasks = <DownloadTaskModel>[].obs;
-  
+  final DownloadService _downloadService = Get.find<DownloadService>();
+
+  // 直接从DownloadService获取响应式任务列表，并提供一个排序后的视图
+  List<DownloadTaskModel> get downloadTasks {
+    final tasks = _downloadService.tasks;
+    tasks.sort((a, b) {
+      final statusOrder = {
+        DownloadStatus.downloading: 0,
+        DownloadStatus.pending: 1,
+        DownloadStatus.paused: 2,
+        DownloadStatus.completed: 3,
+        DownloadStatus.canceled: 4,
+        DownloadStatus.failed: 5,
+      };
+      final statusCompare = statusOrder[a.status]!.compareTo(statusOrder[b.status]!);
+      if (statusCompare != 0) return statusCompare;
+      return b.createdAt.compareTo(a.createdAt);
+    });
+    return tasks;
+  }
+
   // 是否正在加载
   final RxBool isLoading = false.obs;
-  
+
   // 是否正在编辑
   final RxBool isEditing = false.obs;
-  
+
   // 选中的项目
   final RxList<String> selectedItems = <String>[].obs;
-  
-  // 定时器，用于定期刷新任务列表
-  Timer? _refreshTimer;
-  
-  @override
-  void onInit() {
-    super.onInit();
-    Logger.d('TasksController initialized');
-    
-    // 加载下载任务
-    loadTasks();
-    
-    // 启动定时器，每秒刷新一次任务列表
-    _refreshTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      loadTasks();
-    });
-  }
-  
-  @override
-  void onClose() {
-    // 取消定时器
-    _refreshTimer?.cancel();
-    super.onClose();
-  }
-  
-  // 加载下载任务
-  void loadTasks() {
-    try {
-      // 从本地存储获取下载任务
-      final tasks = _downloadRepository.getDownloadTasks();
-      
-      // 按状态和时间排序
-      tasks.sort((a, b) {
-        // 首先按状态排序：下载中 > 等待中 > 暂停 > 已完成 > 已取消 > 失败
-        final statusOrder = {
-          DownloadStatus.downloading: 0,
-          DownloadStatus.pending: 1,
-          DownloadStatus.paused: 2,
-          DownloadStatus.completed: 3,
-          DownloadStatus.canceled: 4,
-          DownloadStatus.failed: 5,
-        };
-        
-        final statusCompare = statusOrder[a.status]!.compareTo(statusOrder[b.status]!);
-        if (statusCompare != 0) return statusCompare;
-        
-        // 然后按时间倒序排序
-        return b.createdAt.compareTo(a.createdAt);
-      });
-      
-      downloadTasks.value = tasks;
-    } catch (e) {
-      Logger.e('加载下载任务时出错: $e');
-    }
-  }
   
   // 暂停下载任务
   Future<void> pauseTask(String taskId) async {
@@ -182,9 +144,6 @@ class TasksController extends GetxController {
       
       // 清空选中项
       selectedItems.clear();
-      
-      // 重新加载任务列表
-      loadTasks();
       
       Utils.showSnackbar('成功', '已删除选中的任务');
     } catch (e) {

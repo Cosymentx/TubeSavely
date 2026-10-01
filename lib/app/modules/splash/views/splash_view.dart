@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../../widgets/adaptive/adaptive_scaffold.dart';
 
 import '../../../theme/app_theme.dart';
 import '../controllers/splash_controller.dart';
@@ -9,7 +10,7 @@ class SplashView extends GetView<SplashController> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AdaptiveScaffold(
       body: Container(
         width: double.infinity,
         height: double.infinity,

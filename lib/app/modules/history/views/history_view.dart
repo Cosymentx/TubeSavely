@@ -1,74 +1,109 @@
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../controllers/history_controller.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:get/get.dart';
+
+import '../../../data/models/video_model.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_text_styles.dart';
-import '../../../data/models/video_model.dart';
+import '../../../widgets/adaptive/adaptive_scaffold.dart';
+import '../../../widgets/adaptive/adaptive_dialog.dart';
+import '../../../widgets/empty_state.dart';
+import '../controllers/history_controller.dart';
 
+/// History视图 - 自适应多端支持
 class HistoryView extends GetView<HistoryController> {
   const HistoryView({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          '下载历史',
-          style: AppTextStyles.titleLarge,
+    return AdaptiveScaffold(
+      appBar: _buildAppBar(),
+      cupertinoNavBar: _buildCupertinoNavBar(),
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildSearchBar(),
+            Expanded(
+              child: _buildHistoryList(),
+            ),
+          ],
         ),
-        centerTitle: true,
-        elevation: 0,
-        actions: [
-          Obx(() {
-            if (controller.isEditing.value) {
-              return Row(
-                children: [
-                  IconButton(
-                    icon: Icon(Icons.select_all),
-                    onPressed: controller.selectAll,
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.delete),
-                    onPressed: controller.selectedItems.isNotEmpty
-                        ? controller.deleteSelected
-                        : null,
-                  ),
-                ],
-              );
-            } else {
-              return IconButton(
-                icon: Icon(Icons.edit),
-                onPressed: controller.toggleEditMode,
-              );
-            }
-          }),
-        ],
       ),
-      body: Column(
-        children: [
-          _buildSearchBar(),
-          Expanded(
-            child: _buildHistoryList(),
-          ),
-        ],
-      ),
-      floatingActionButton: Obx(() {
+      floatingActionButton: _buildFloatingActionButton(),
+    );
+  }
+
+  CupertinoNavigationBar _buildCupertinoNavBar() {
+    return CupertinoNavigationBar(
+      middle: const Text('下载历史'),
+      trailing: Obx(() {
         if (controller.isEditing.value) {
-          return FloatingActionButton(
-            onPressed: controller.toggleEditMode,
-            backgroundColor: AppColors.primary,
-            child: Icon(Icons.check),
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CupertinoButton(
+                padding: EdgeInsets.zero,
+                onPressed: controller.selectAll,
+                child: const Icon(CupertinoIcons.checkmark_circle, size: 22),
+              ),
+              SizedBox(width: 8.w),
+              CupertinoButton(
+                padding: EdgeInsets.zero,
+                onPressed: controller.selectedItems.isNotEmpty ? controller.deleteSelected : null,
+                child: Icon(
+                  CupertinoIcons.delete,
+                  size: 22,
+                  color: controller.selectedItems.isNotEmpty
+                      ? CupertinoColors.destructiveRed
+                      : CupertinoColors.inactiveGray,
+                ),
+              ),
+            ],
           );
         } else {
-          return FloatingActionButton(
-            onPressed: _showClearHistoryConfirmation,
-            backgroundColor: AppColors.primary,
-            child: Icon(Icons.delete_sweep),
+          return CupertinoButton(
+            padding: EdgeInsets.zero,
+            onPressed: controller.toggleEditMode,
+            child: const Icon(CupertinoIcons.pencil, size: 22),
           );
         }
       }),
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      title: Text(
+        '下载历史',
+        style: AppTextStyles.titleLarge,
+      ),
+      centerTitle: true,
+      elevation: 0,
+      actions: [
+        Obx(() {
+          if (controller.isEditing.value) {
+            return Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.select_all),
+                  onPressed: controller.selectAll,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete),
+                  onPressed: controller.selectedItems.isNotEmpty ? controller.deleteSelected : null,
+                ),
+              ],
+            );
+          } else {
+            return IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: controller.toggleEditMode,
+            );
+          }
+        }),
+      ],
     );
   }
 
@@ -106,23 +141,11 @@ class HistoryView extends GetView<HistoryController> {
       }
 
       if (controller.historyList.isEmpty) {
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.history,
-                size: 64.sp,
-                color: AppColors.textSecondary.withAlpha(76),
-              ),
-              SizedBox(height: 16.h),
-              Text(
-                '暂无下载历史',
-                style: AppTextStyles.bodyLarge.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ],
+        return const Center(
+          child: EmptyState(
+            icon: Icons.history_rounded,
+            title: '暂无下载历史',
+            subtitle: '已下载完成的视频将显示在此处',
           ),
         );
       }
@@ -255,12 +278,8 @@ class HistoryView extends GetView<HistoryController> {
                   Padding(
                     padding: EdgeInsets.only(left: 8.w),
                     child: Icon(
-                      isSelected
-                          ? Icons.check_circle
-                          : Icons.radio_button_unchecked,
-                      color: isSelected
-                          ? AppColors.primary
-                          : AppColors.textSecondary.withAlpha(76),
+                      isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
+                      color: isSelected ? AppColors.primary : AppColors.textSecondary.withAlpha(76),
                       size: 24.sp,
                     ),
                   ),
@@ -292,28 +311,35 @@ class HistoryView extends GetView<HistoryController> {
     }
   }
 
+  // 构建浮动操作按钮
+  Widget? _buildFloatingActionButton() {
+    return Obx(() {
+      if (controller.isEditing.value) {
+        return FloatingActionButton(
+          onPressed: controller.toggleEditMode,
+          backgroundColor: AppColors.primary,
+          child: Icon(Icons.check),
+        );
+      } else {
+        return FloatingActionButton(
+          onPressed: _showClearHistoryConfirmation,
+          backgroundColor: AppColors.primary,
+          child: Icon(Icons.delete_sweep),
+        );
+      }
+    });
+  }
+
   // 显示清空历史记录确认对话框
   void _showClearHistoryConfirmation() {
     Get.dialog(
-      AlertDialog(
-        title: Text('清空历史记录'),
-        content: Text('确定要清空所有下载历史记录吗？'),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: Text('取消'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Get.back();
-              controller.clearHistory();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-            ),
-            child: Text('确定'),
-          ),
-        ],
+      AdaptiveDialog(
+        title: '清空历史记录',
+        message: '确定要清空所有下载历史记录吗？',
+        confirmButtonText: '清空',
+        cancelButtonText: '取消',
+        isDangerousAction: true,
+        onConfirm: () => controller.clearHistory(),
       ),
     );
   }

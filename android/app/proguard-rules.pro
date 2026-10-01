@@ -288,3 +288,4 @@
 #避免混淆
 -keep public class com.fm.openinstall.** {*; }
 -keep public interface com.fm.openinstall.** {*; }
+-dontwarn javax.xml.stream.XMLStreamException

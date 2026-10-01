@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../../widgets/adaptive/adaptive_scaffold.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../controllers/main_controller.dart';
 import '../../../theme/app_colors.dart';
@@ -9,7 +10,7 @@ class MainView extends GetView<MainController> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AdaptiveScaffold(
       body: Obx(() => controller.pages[controller.currentIndex.value]),
       bottomNavigationBar: Obx(() => _buildBottomNavigationBar()),
     );

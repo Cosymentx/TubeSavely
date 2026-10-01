@@ -1,10 +1,12 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:tubesavely/app/services/video_player_service.dart';
 import 'package:tubesavely/app/theme/app_theme.dart';
+import 'package:tubesavely/app/widgets/adaptive/adaptive_scaffold.dart';
 
 import '../controllers/video_detail_controller.dart';
 
@@ -13,7 +15,9 @@ class VideoDetailView extends GetView<VideoDetailController> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AdaptiveScaffold(
+      appBar: _buildAppBar(),
+      cupertinoNavBar: _buildCupertinoNavBar(),
       body: SafeArea(
         child: Obx(() {
           if (controller.video.value == null) {
@@ -30,7 +34,6 @@ class VideoDetailView extends GetView<VideoDetailController> {
 
           return Column(
             children: [
-              _buildAppBar(),
               Expanded(
                 child: SingleChildScrollView(
                   child: Column(
@@ -55,59 +58,58 @@ class VideoDetailView extends GetView<VideoDetailController> {
     );
   }
 
-  // 顶部导航栏
-  Widget _buildAppBar() {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-      decoration: BoxDecoration(
-        color: Get.theme.colorScheme.surface,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(13),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
+  CupertinoNavigationBar _buildCupertinoNavBar() {
+    return CupertinoNavigationBar(
+      middle: const Text('视频详情'),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          IconButton(
-            icon: Icon(
-              Icons.arrow_back_ios,
-              size: 20.sp,
-              color: Get.theme.colorScheme.onSurface,
-            ),
-            onPressed: () => Get.back(),
+          CupertinoButton(
+            padding: EdgeInsets.zero,
+            onPressed: controller.shareVideo,
+            child: const Icon(CupertinoIcons.share, size: 20),
           ),
           SizedBox(width: 8.w),
-          Expanded(
-            child: Text(
-              '视频详情',
-              style: TextStyle(
-                fontSize: 18.sp,
-                fontWeight: FontWeight.bold,
-                color: Get.theme.colorScheme.onSurface,
-              ),
-            ),
-          ),
-          IconButton(
-            icon: Icon(
-              Icons.share,
-              size: 20.sp,
-              color: Get.theme.colorScheme.onSurface,
-            ),
-            onPressed: controller.shareVideo,
-          ),
-          IconButton(
-            icon: Icon(
-              Icons.favorite_border,
-              size: 20.sp,
-              color: Get.theme.colorScheme.onSurface,
-            ),
+          CupertinoButton(
+            padding: EdgeInsets.zero,
             onPressed: controller.favoriteVideo,
+            child: const Icon(CupertinoIcons.heart, size: 20),
           ),
         ],
       ),
+    );
+  }
+
+  // 顶部导航栏
+  AppBar _buildAppBar() {
+    return AppBar(
+      title: Text(
+        '视频详情',
+        style: TextStyle(
+          fontSize: 18.sp,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      centerTitle: true,
+      elevation: 0,
+      actions: [
+        IconButton(
+          icon: Icon(
+            Icons.share,
+            size: 20.sp,
+            color: Get.theme.colorScheme.onSurface,
+          ),
+          onPressed: controller.shareVideo,
+        ),
+        IconButton(
+          icon: Icon(
+            Icons.favorite_border,
+            size: 20.sp,
+            color: Get.theme.colorScheme.onSurface,
+          ),
+          onPressed: controller.favoriteVideo,
+        )
+      ],
     );
   }
 

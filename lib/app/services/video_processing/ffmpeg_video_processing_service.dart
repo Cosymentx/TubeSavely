@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 // 临时使用存根实现，避免编译错误
-import '../../../core/ffmpeg/ffmpeg_stub.dart';
+import 'ffmpeg_stub.dart';
 import 'package:path/path.dart' as path;
 import 'package:tubesavely/app/utils/logger.dart';
 import 'video_processing_service.dart';

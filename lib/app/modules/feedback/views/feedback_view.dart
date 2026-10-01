@@ -1,22 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import '../../../widgets/adaptive/adaptive_scaffold.dart';
 import 'package:tubesavely/app/theme/app_colors.dart';
 import 'package:tubesavely/app/theme/app_text_styles.dart';
 import '../controllers/feedback_controller.dart';
+
+import 'package:flutter/cupertino.dart';
 
 class FeedbackView extends GetView<FeedbackController> {
   const FeedbackView({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AdaptiveScaffold(
       appBar: AppBar(
         title: Text('意见反馈'),
         centerTitle: true,
         leading: IconButton(
           icon: Icon(Icons.arrow_back),
           onPressed: () => Get.back(),
+        ),
+      ),
+      cupertinoNavBar: CupertinoNavigationBar(
+        middle: const Text('意见反馈'),
+        leading: CupertinoButton(
+          padding: EdgeInsets.zero,
+          onPressed: () => Get.back(),
+          child: const Icon(CupertinoIcons.back),
         ),
       ),
       body: SingleChildScrollView(

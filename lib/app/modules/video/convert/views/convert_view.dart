@@ -7,12 +7,15 @@ import 'package:tubesavely/app/services/video_converter_service.dart';
 import 'package:tubesavely/app/theme/app_colors.dart';
 import 'package:tubesavely/app/theme/app_text_styles.dart';
 
+import 'package:flutter/cupertino.dart';
+import 'package:tubesavely/app/widgets/adaptive/adaptive_scaffold.dart';
+
 class ConvertView extends GetView<ConvertController> {
   const ConvertView({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AdaptiveScaffold(
       appBar: AppBar(
         title: Text('视频格式转换', style: AppTextStyles.titleLarge),
         actions: [
@@ -23,31 +26,32 @@ class ConvertView extends GetView<ConvertController> {
           ),
         ],
       ),
-      body: Padding(
-        padding: EdgeInsets.all(16.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildFormatSelector(),
-            SizedBox(height: 16.h),
-            _buildResolutionSelector(),
-            SizedBox(height: 16.h),
-            _buildFileSelector(),
-            SizedBox(height: 16.h),
-            _buildTaskList(),
-          ],
+      cupertinoNavBar: CupertinoNavigationBar(
+        middle: const Text('视频格式转换'),
+        trailing: CupertinoButton(
+          padding: EdgeInsets.zero,
+          onPressed: controller.openOutputFolder,
+          child: const Icon(CupertinoIcons.folder, size: 22),
         ),
       ),
-      floatingActionButton: Obx(() {
-        return controller.selectedFiles.isNotEmpty
-            ? FloatingActionButton.extended(
-                onPressed: controller.convertAllVideos,
-                icon: const Icon(Icons.transform),
-                label: Text('转换所有文件 (${controller.selectedFiles.length})'),
-                backgroundColor: AppColors.primary,
-              )
-            : const SizedBox.shrink();
-      }),
+      body: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.all(16.w),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildFormatSelector(),
+              SizedBox(height: 16.h),
+              _buildResolutionSelector(),
+              SizedBox(height: 16.h),
+              _buildFileSelector(),
+              SizedBox(height: 16.h),
+              _buildTaskList(),
+            ],
+          ),
+        ),
+      ),
+      floatingActionButton: _buildFloatingActionButton(),
     );
   }
 
@@ -444,6 +448,20 @@ class ConvertView extends GetView<ConvertController> {
         return '失败';
       case ConversionStatus.canceled:
         return '已取消';
+    }
+  }
+
+  // 构建浮动操作按钮
+  FloatingActionButton? _buildFloatingActionButton() {
+    if (controller.selectedFiles.isNotEmpty) {
+      return FloatingActionButton.extended(
+        onPressed: controller.convertAllVideos,
+        icon: const Icon(Icons.transform),
+        label: Text('转换所有文件 (${controller.selectedFiles.length})'),
+        backgroundColor: AppColors.primary,
+      );
+    } else {
+      return null;
     }
   }
 

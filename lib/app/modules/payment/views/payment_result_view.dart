@@ -6,6 +6,9 @@ import 'package:tubesavely/app/routes/app_pages.dart';
 import 'package:tubesavely/app/theme/app_colors.dart';
 import 'package:tubesavely/app/theme/app_text_styles.dart';
 import 'package:tubesavely/app/utils/utils.dart';
+import 'package:tubesavely/app/widgets/adaptive/adaptive_scaffold.dart';
+
+import 'package:flutter/cupertino.dart';
 
 /// 支付结果页面
 class PaymentResultView extends StatelessWidget {
@@ -19,7 +22,7 @@ class PaymentResultView extends StatelessWidget {
     final OrderModel? order = args['order'];
     final String? errorMessage = args['errorMessage'];
 
-    return Scaffold(
+    return AdaptiveScaffold(
       appBar: AppBar(
         title: Text(
           '支付结果',
@@ -27,6 +30,10 @@ class PaymentResultView extends StatelessWidget {
         ),
         centerTitle: true,
         elevation: 0,
+        automaticallyImplyLeading: false,
+      ),
+      cupertinoNavBar: const CupertinoNavigationBar(
+        middle: Text('支付结果'),
         automaticallyImplyLeading: false,
       ),
       body: Center(

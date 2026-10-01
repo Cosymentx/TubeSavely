@@ -28,6 +28,9 @@ import 'user_service.dart';
 Future<void> initServices() async {
   Logger.i('正在初始化服务...');
 
+  // 注册服务
+  Get.put(StorageProvider(), permanent: true);
+
   // 初始化GetStorage
   await GetStorage.init();
 
@@ -43,8 +46,7 @@ Future<void> initServices() async {
   // 初始化ScreenUtil
   // ScreenUtil会在应用启动时自动初始化
 
-  // 注册服务
-  Get.put(StorageProvider(), permanent: true);
+  Get.put(ApiProvider(), permanent: true);
 
   // 初始化并注册主题服务
   final themeService = await ThemeService().init();
@@ -52,8 +54,6 @@ Future<void> initServices() async {
 
   // 注册翻译服务
   Get.put(TranslationService(), permanent: true);
-
-  Get.put(ApiProvider(), permanent: true);
 
   // 初始化并注册视频解析服务
   final videoParserService = await VideoParserService().init();

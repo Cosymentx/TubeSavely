@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../../widgets/adaptive/adaptive_scaffold.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:tubesavely/app/data/models/payment_model.dart';
 import 'package:tubesavely/app/modules/payment/controllers/transaction_history_controller.dart';
@@ -8,13 +9,16 @@ import 'package:tubesavely/app/theme/app_colors.dart';
 import 'package:tubesavely/app/theme/app_text_styles.dart';
 import 'package:tubesavely/app/utils/utils.dart';
 
+import 'package:flutter/cupertino.dart';
+import '../../../widgets/empty_state.dart';
+
 /// 交易记录页面
 class TransactionHistoryView extends GetView<TransactionHistoryController> {
   const TransactionHistoryView({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AdaptiveScaffold(
       appBar: AppBar(
         title: Text(
           '交易记录',
@@ -22,6 +26,9 @@ class TransactionHistoryView extends GetView<TransactionHistoryController> {
         ),
         centerTitle: true,
         elevation: 0,
+      ),
+      cupertinoNavBar: const CupertinoNavigationBar(
+        middle: Text('交易记录'),
       ),
       body: Obx(() {
         if (controller.isLoading.value) {
@@ -40,60 +47,16 @@ class TransactionHistoryView extends GetView<TransactionHistoryController> {
   /// 构建空状态
   Widget _buildEmptyState() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.receipt_long,
-            size: 80.r,
-            color: Colors.grey.withOpacity(0.5),
-          ),
-          SizedBox(height: 16.h),
-          Text(
-            '暂无交易记录',
-            style: TextStyle(
-              fontSize: 18.sp,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey,
-            ),
-          ),
-          SizedBox(height: 8.h),
-          Text(
-            '您的交易记录将显示在这里',
-            style: TextStyle(
-              fontSize: 14.sp,
-              color: Colors.grey,
-            ),
-          ),
-          SizedBox(height: 24.h),
-          ElevatedButton(
-            onPressed: () {
-              // 传递initialTab参数，1表示积分充值标签页
-              Get.toNamed(Routes.PAYMENT, arguments: {'initialTab': 1});
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              padding: EdgeInsets.symmetric(
-                horizontal: 24.w,
-                vertical: 12.h,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12.r),
-              ),
-            ),
-            child: Text(
-              '去充值',
-              style: TextStyle(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ],
+      child: EmptyState(
+        icon: Icons.receipt_long,
+        title: '暂无交易记录',
+        subtitle: '您的充值与会员订阅记录将显示在这里',
+        actionLabel: '去充值',
+        onAction: () => Get.back(),
       ),
     );
   }
+
 
   /// 构建交易列表
   Widget _buildTransactionList() {
