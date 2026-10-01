@@ -196,7 +196,7 @@ class ApplePaymentService extends GetxService {
   }
 
   /// 监听购买更新
-  void _listenToPurchaseUpdated(List<PurchaseDetails> purchaseDetailsList) {
+  Future<void> _listenToPurchaseUpdated(List<PurchaseDetails> purchaseDetailsList) async {
     for (final purchaseDetails in purchaseDetailsList) {
       if (purchaseDetails.status == PurchaseStatus.pending) {
         // 购买中
@@ -212,23 +212,22 @@ class ApplePaymentService extends GetxService {
         Logger.d(
             'Purchase ${purchaseDetails.status == PurchaseStatus.purchased ? 'purchased' : 'restored'}: ${purchaseDetails.productID}');
 
-        // 验证购买
-        _verifyPurchase(purchaseDetails);
+        // Only finish the StoreKit transaction after server-side verification.
+        final verified = await _verifyPurchase(purchaseDetails);
+        if (verified && purchaseDetails.pendingCompletePurchase) {
+          await _inAppPurchase.completePurchase(purchaseDetails);
+        }
       } else if (purchaseDetails.status == PurchaseStatus.canceled) {
         // 购买取消
         Logger.d('Purchase canceled: ${purchaseDetails.productID}');
         _paymentCallback?.call(false, 'Purchase canceled');
       }
 
-      // 完成购买
-      if (purchaseDetails.pendingCompletePurchase) {
-        _inAppPurchase.completePurchase(purchaseDetails);
-      }
     }
   }
 
   /// 验证购买
-  Future<void> _verifyPurchase(PurchaseDetails purchaseDetails) async {
+  Future<bool> _verifyPurchase(PurchaseDetails purchaseDetails) async {
     try {
       // 构建验证数据
       final Map<String, dynamic> verificationData = {
@@ -242,17 +241,26 @@ class ApplePaymentService extends GetxService {
       // 验证购买
       final response = await _apiProvider.verifyPayment(verificationData);
 
-      if (response.status.isOk) {
+      final body = response.body;
+      final verified = response.status.isOk &&
+          body is Map &&
+          body['code'] == 200 &&
+          body['data'] is Map &&
+          body['data']['status'] == 'completed';
+
+      if (verified) {
         Logger.d('Purchase verified successfully');
         _paymentCallback?.call(true, null);
-      } else {
-        Logger.e('Purchase verification failed: ${response.statusText}');
-        _paymentCallback?.call(
-            false, 'Purchase verification failed: ${response.statusText}');
+        return true;
       }
+
+      Logger.e('Purchase verification was not confirmed by the server');
+      _paymentCallback?.call(false, 'Purchase verification failed');
+      return false;
     } catch (e) {
-      Logger.e('Error verifying purchase: $e');
-      _paymentCallback?.call(false, 'Error verifying purchase: $e');
+      Logger.e('Error verifying purchase: ${e.runtimeType}');
+      _paymentCallback?.call(false, 'Purchase verification failed');
+      return false;
     }
   }
 
