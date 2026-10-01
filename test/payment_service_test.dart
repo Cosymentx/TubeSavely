@@ -3,6 +3,34 @@ import 'package:tubesavely/app/data/models/payment_model.dart';
 
 void main() {
   group('Payment Model Tests', () {
+    test('Server credit tiers retain IDs and both currency prices', () {
+      final product = ProductModel.fromJson(
+          {'id': 4, 'credits': 2000, 'amount_cny': 59.99, 'amount_usd': 59.99});
+      expect(product.id, '4');
+      expect(product.metadata?['credits'], 2000);
+      expect(product.price, 59.99);
+      expect(product.forCurrency('USD').currency, 'USD');
+      expect(product.forCurrency('USD').price, 59.99);
+    });
+
+    test('Hosted checkout accepts numeric amounts and provider order IDs', () {
+      final order = OrderModel.fromJson({
+        'id': 42,
+        'order_id': 'TS-fixture',
+        'credit_amount_id': 1,
+        'user_id': 7,
+        'amount': 9.99,
+        'currency': 'USD',
+        'payment_method': 'creem',
+        'status': 'pending',
+        'payment_url': 'https://www.creem.io/payment/fixture'
+      });
+      expect(order.id, 'TS-fixture');
+      expect(order.productId, '1');
+      expect(order.amount, 9.99);
+      expect(order.paymentMethod, PaymentMethod.creem);
+      expect(order.status, 'pending');
+    });
     test('ProductModel should be created correctly', () {
       // 准备测试数据
       final product = ProductModel(

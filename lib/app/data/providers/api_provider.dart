@@ -201,7 +201,7 @@ class ApiProvider extends GetConnect {
       String oldPassword, String newPassword) {
     Logger.d('User change password');
     return post('/api/v1/auth/change-password', {
-      'old_password': oldPassword,
+      'current_password': oldPassword,
       'new_password': newPassword,
     });
   }
@@ -306,6 +306,9 @@ class ApiProvider extends GetConnect {
     return get('/api/v1/credit_amount/active/list');
   }
 
+  Future<Response<dynamic>> getPaymentMethods() =>
+      get('/api/v1/payments/methods');
+
   // ==================== 订单相关 ====================
 
   /// 创建订单
@@ -336,7 +339,7 @@ class ApiProvider extends GetConnect {
   /// [data] 支付验证数据
   Future<Response<dynamic>> verifyPayment(Map<String, dynamic> data) {
     Logger.d('Verifying payment');
-    return post('/api/v1/payments/verify', data);
+    return getOrderStatus(data['order_id'].toString());
   }
 
   /// 获取交易记录
@@ -345,8 +348,8 @@ class ApiProvider extends GetConnect {
   /// [limit] 每页数量，默认为10
   Future<Response<dynamic>> getTransactions({int offset = 0, int limit = 10}) {
     Logger.d('Getting transactions');
-    return get('/api/v1/payments/orders', query: {
-      'offset': offset.toString(),
+    return get('/api/v1/payments/history', query: {
+      'page': (offset ~/ limit + 1).toString(),
       'limit': limit.toString(),
     });
   }

@@ -335,33 +335,14 @@ class PaymentView extends GetView<PaymentController> {
           spacing: 8.w,
           runSpacing: 8.h,
           children: [
-            if (PlatformUtil.isIOS)
-              _buildPaymentMethodItem(
-                'Apple Pay',
-                'assets/images/apple_pay.png',
-                PaymentMethod.applePay,
-              ),
-            if (PlatformUtil.isAndroid)
-              _buildPaymentMethodItem(
-                'Google Pay',
-                'assets/images/google_pay.png',
-                PaymentMethod.googlePay,
-              ),
-            _buildPaymentMethodItem(
-              'Stripe',
-              'assets/images/stripe.png',
-              PaymentMethod.stripe,
-            ),
-            _buildPaymentMethodItem(
-              '支付宝',
-              'assets/images/alipay.png',
-              PaymentMethod.alipay,
-            ),
-            _buildPaymentMethodItem(
-              '微信支付',
-              'assets/images/wechat_pay.png',
-              PaymentMethod.wechatPay,
-            ),
+            for (final method in controller.availablePaymentMethods)
+              if (PaymentMethod.values
+                  .any((value) => value.name == method['id']))
+                _buildPaymentMethodItem(
+                    method['name'].toString(),
+                    '',
+                    PaymentMethod.values
+                        .firstWhere((value) => value.name == method['id'])),
           ],
         ),
         SizedBox(height: 16.h),
@@ -424,6 +405,7 @@ class PaymentView extends GetView<PaymentController> {
       case PaymentMethod.googlePay:
         return Icons.g_mobiledata;
       case PaymentMethod.stripe:
+      case PaymentMethod.creem:
         return Icons.credit_card;
       case PaymentMethod.alipay:
         return Icons.account_balance_wallet;

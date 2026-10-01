@@ -32,7 +32,8 @@ class VideoRepository {
             }
           }
         }
-        Logger.d('Backend API parse failed or returned empty, falling back to VideoParserService');
+        Logger.d(
+            'Backend API parse failed or returned empty, falling back to VideoParserService');
       }
 
       // 使用本地视频解析服务解析
@@ -94,7 +95,10 @@ class VideoRepository {
       );
 
       if (response.status.isOk) {
-        final List<dynamic> data = response.body['data'] ?? [];
+        final dynamic payload = response.body['data'];
+        final List<dynamic> data = payload is Map
+            ? (payload['records'] as List? ?? [])
+            : (payload as List? ?? []);
         return data.map((item) => VideoModel.fromJson(item)).toList();
       }
 

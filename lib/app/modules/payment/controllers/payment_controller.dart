@@ -1,11 +1,10 @@
-import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tubesavely/app/data/models/payment_model.dart';
 import 'package:tubesavely/app/data/models/user_model.dart';
 import 'package:tubesavely/app/data/repositories/payment_repository.dart';
 import 'package:tubesavely/app/services/stripe_service.dart';
+import 'package:tubesavely/app/services/payment_service.dart';
 import 'package:tubesavely/app/services/user_service.dart';
 import 'package:tubesavely/app/utils/logger.dart';
 import 'package:tubesavely/app/utils/utils.dart';
@@ -29,7 +28,7 @@ class PaymentController extends GetxController
 
   // 选中的支付方式
   final Rx<PaymentMethod> selectedPaymentMethod = Rx<PaymentMethod>(
-    Platform.isIOS ? PaymentMethod.applePay : PaymentMethod.stripe,
+    PaymentMethod.stripe,
   );
 
   // 当前订单
@@ -70,7 +69,7 @@ class PaymentController extends GetxController
     loadUserInfo();
 
     // 检查Google Pay是否可用
-    if (Platform.isAndroid) {
+    if (GetPlatform.isAndroid) {
       checkGooglePaySupport();
     }
   }
@@ -94,21 +93,27 @@ class PaymentController extends GetxController
       final products = await _paymentRepository.getProducts();
 
       // 分类商品
-      membershipProducts.value =
-          products
-              .where((product) => product.type == ProductType.membership)
-              .toList();
+      membershipProducts.value = products
+          .where((product) => product.type == ProductType.membership)
+          .toList();
 
-      creditsProducts.value =
-          products
-              .where((product) => product.type == ProductType.credit)
-              .toList();
+      creditsProducts.value = products
+          .where((product) => product.type == ProductType.credit)
+          .toList();
 
       // 默认选中第一个商品
       if (membershipProducts.isNotEmpty) {
         selectedProduct.value = membershipProducts.first;
       } else if (creditsProducts.isNotEmpty) {
         selectedProduct.value = creditsProducts.first;
+        tabController.index = 1;
+      }
+      final enabled =
+          availablePaymentMethods.map((entry) => entry['id']).toList();
+      if (!enabled.contains(selectedPaymentMethod.value.name) &&
+          enabled.isNotEmpty) {
+        selectPaymentMethod(PaymentMethod.values
+            .firstWhere((method) => method.name == enabled.first));
       }
     } catch (e) {
       Logger.e('Error loading products: $e');
@@ -144,9 +149,22 @@ class PaymentController extends GetxController
     selectedProduct.value = product;
   }
 
+  List<Map<String, dynamic>> get availablePaymentMethods =>
+      Get.find<PaymentService>().availableMethods;
+
   /// 选择支付方式
   void selectPaymentMethod(PaymentMethod method) {
     selectedPaymentMethod.value = method;
+    final config = availablePaymentMethods
+        .firstWhereOrNull((entry) => entry['id'] == method.name);
+    final currencies = config?['currencies'] as List? ?? [];
+    final currency = currencies.contains('CNY') ? 'CNY' : 'USD';
+    final selectedId = selectedProduct.value?.id;
+    creditsProducts.assignAll(creditsProducts
+        .map((product) => product.forCurrency(currency))
+        .toList());
+    selectedProduct.value =
+        creditsProducts.firstWhereOrNull((product) => product.id == selectedId);
   }
 
   /// 创建订单
@@ -159,31 +177,11 @@ class PaymentController extends GetxController
     try {
       isLoading.value = true;
 
-      OrderModel? order;
-
-      // 在开发模式下，模拟创建订单
-      if (kDebugMode) {
-        // 模拟订单创建
-        await Future.delayed(const Duration(seconds: 1));
-
-        // 创建模拟订单
-        order = OrderModel(
-          id: 'order_${DateTime.now().millisecondsSinceEpoch}',
-          productId: selectedProduct.value!.id,
-          userId: userInfo.value?.id.toString() ?? 'user_123',
-          amount: selectedProduct.value!.price,
-          currency: selectedProduct.value!.currency,
-          status: 'pending',
-          paymentMethod: selectedPaymentMethod.value,
-          createdAt: DateTime.now(),
-        );
-      } else {
-        // 正常调用创建订单
-        order = await _paymentRepository.createOrder(
-          selectedProduct.value!.id,
-          selectedPaymentMethod.value,
-        );
-      }
+      final order = await _paymentRepository.createOrder(
+        selectedProduct.value!.id,
+        selectedPaymentMethod.value,
+        currency: selectedProduct.value!.currency,
+      );
 
       if (order != null) {
         currentOrder.value = order;
@@ -206,84 +204,9 @@ class PaymentController extends GetxController
     try {
       isLoading.value = true;
 
-      // 处理支付
-      bool success;
-
-      // 检查是否选择了Stripe支付方式
-      if (order.paymentMethod == PaymentMethod.stripe) {
-        // 使用Stripe支付
-        success = await _paymentRepository.processPayment(order);
-      } else if (kDebugMode) {
-        // 在开发模式下，模拟其他支付方式的支付成功
-        await Future.delayed(const Duration(seconds: 2));
-        success = true;
-
-        // 模拟更新用户信息
-        if (success && userInfo.value != null) {
-          final user = userInfo.value!;
-
-          // 根据商品类型更新用户信息
-          if (order.productId.contains('membership')) {
-            // 会员商品
-            int level = 1; // 默认高级会员
-            if (order.productId.contains('pro')) {
-              level = 2; // 专业会员
-            }
-
-            // 计算会员到期时间
-            DateTime? expiry;
-            if (user.membershipExpiry != null &&
-                user.membershipExpiry!.isAfter(DateTime.now())) {
-              // 如果当前会员未过期，则在当前到期时间基础上延长
-              expiry = user.membershipExpiry;
-            } else {
-              // 如果当前会员已过期，则从现在开始计算
-              expiry = DateTime.now();
-            }
-
-            // 根据商品ID确定会员时长
-            int days = 30; // 默认30天
-            if (order.productId.contains('quarterly')) {
-              days = 90;
-            } else if (order.productId.contains('yearly')) {
-              days = 365;
-            }
-
-            // 更新会员到期时间
-            expiry = expiry!.add(Duration(days: days));
-
-            // 更新用户信息
-            final updatedUser = user.copyWith(
-              level: level,
-              membershipExpiry: expiry,
-            );
-
-            // 更新用户服务中的用户信息
-            await _userService.mockUpdateUser(updatedUser);
-          } else if (order.productId.contains('credits')) {
-            // 积分商品
-            int credits = 0;
-            if (order.productId.contains('100')) {
-              credits = 100;
-            } else if (order.productId.contains('300')) {
-              credits = 330;
-            } else if (order.productId.contains('500')) {
-              credits = 600;
-            } else if (order.productId.contains('1000')) {
-              credits = 1300;
-            }
-
-            // 更新用户信息
-            final updatedUser = user.copyWith(credits: user.credits + credits);
-
-            // 更新用户服务中的用户信息
-            await _userService.mockUpdateUser(updatedUser);
-          }
-        }
-      } else {
-        // 正常调用支付处理
-        success = await _paymentRepository.processPayment(order);
-      }
+      final success = await _paymentRepository.processPayment(order);
+      final latest = Get.find<PaymentService>().currentOrder.value ?? order;
+      currentOrder.value = latest;
 
       if (success) {
         // 支付成功，更新用户信息
@@ -292,7 +215,7 @@ class PaymentController extends GetxController
         // 导航到支付结果页面
         Get.toNamed(
           '/payment-result',
-          arguments: {'isSuccess': true, 'order': order},
+          arguments: {'isSuccess': true, 'order': latest},
         );
       } else {
         // 导航到支付结果页面
@@ -300,8 +223,11 @@ class PaymentController extends GetxController
           '/payment-result',
           arguments: {
             'isSuccess': false,
-            'order': order,
-            'errorMessage': '支付处理失败，请稍后重试',
+            'order': latest,
+            'isPending': latest.status == 'pending',
+            'errorMessage': latest.status == 'pending'
+                ? '订单尚未确认，请完成支付后在交易记录中查看状态。'
+                : '支付处理失败，请稍后重试',
           },
         );
       }

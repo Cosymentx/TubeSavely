@@ -57,7 +57,6 @@ class TransactionHistoryView extends GetView<TransactionHistoryController> {
     );
   }
 
-
   /// 构建交易列表
   Widget _buildTransactionList() {
     return RefreshIndicator(
@@ -315,6 +314,8 @@ class TransactionHistoryView extends GetView<TransactionHistoryController> {
         return 'Google Pay';
       case PaymentMethod.stripe:
         return 'Stripe';
+      case PaymentMethod.creem:
+        return 'Creem';
       case PaymentMethod.alipay:
         return '支付宝';
       case PaymentMethod.wechatPay:

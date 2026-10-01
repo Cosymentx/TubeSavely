@@ -5,6 +5,7 @@ enum PaymentMethod {
   applePay,
   googlePay,
   stripe,
+  creem,
   alipay,
   wechatPay,
 }
@@ -37,8 +38,24 @@ class ProductModel {
   });
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
+    if (json.containsKey('amount_cny') && json.containsKey('credits')) {
+      final credits = int.tryParse(json['credits'].toString()) ?? 0;
+      return ProductModel(
+        id: json['id'].toString(),
+        title: '$credits 积分',
+        description: '视频解析积分',
+        price: double.tryParse(json['amount_cny'].toString()) ?? 0,
+        currency: 'CNY',
+        type: ProductType.credit,
+        metadata: {
+          'credits': credits,
+          'amount_cny': json['amount_cny'],
+          'amount_usd': json['amount_usd']
+        },
+      );
+    }
     return ProductModel(
-      id: json['id'],
+      id: json['id'].toString(),
       title: json['title'],
       description: json['description'],
       price: json['price'].toDouble(),
@@ -50,6 +67,20 @@ class ProductModel {
       metadata: json['metadata'],
     );
   }
+
+  ProductModel forCurrency(String selectedCurrency) => ProductModel(
+        id: id,
+        title: title,
+        description: description,
+        price: double.tryParse(metadata?[
+                        selectedCurrency == 'USD' ? 'amount_usd' : 'amount_cny']
+                    ?.toString() ??
+                '') ??
+            price,
+        currency: selectedCurrency,
+        type: type,
+        metadata: metadata,
+      );
 
   Map<String, dynamic> toJson() {
     return {
@@ -98,9 +129,10 @@ class OrderModel {
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
     return OrderModel(
-      id: json['id'] ?? json['order_id'] ?? '',
-      productId: json['product_id'] ?? json['credit_amount_id'] ?? '',
-      userId: json['user_id'],
+      id: (json['order_id'] ?? json['id'] ?? '').toString(),
+      productId:
+          (json['product_id'] ?? json['credit_amount_id'] ?? '').toString(),
+      userId: json['user_id']?.toString(),
       amount: (json['amount'] is String)
           ? double.tryParse(json['amount']) ?? 0.0
           : (json['amount'] ?? 0.0).toDouble(),
