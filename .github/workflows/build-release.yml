@@ -1,0 +1,325 @@
+name: Build Multi-Platform Release
+
+# 当合并到 master / main 分支时自动触发全平台打包与发布
+on:
+  push:
+    branches:
+      - master
+      - main
+  workflow_dispatch:
+
+# 同分支只保留最新一次构建，旧任务自动取消以节省 Actions 额度
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  # ============================================================
+  # 阶段 1：门禁测试（分析与测试通过后才进入多平台打包）
+  # ============================================================
+  test:
+    name: Test & Lint Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Code Analysis
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings lib/ test/
+
+      - name: Unit Tests
+        run: flutter test
+
+  # ============================================================
+  # 阶段 2：Android 产物构建 (APK)
+  # ============================================================
+  build-android:
+    name: Build Android APK
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build Android APK
+        run: flutter build apk --release
+
+      - name: Upload Android Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 1
+
+  # ============================================================
+  # 阶段 3：iOS 产物构建 (IPA)
+  # ============================================================
+  build-ios:
+    name: Build iOS IPA
+    needs: test
+    runs-on: macos-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build iOS App (No Codesign)
+        run: flutter build ios --release --no-codesign
+
+      - name: Package Payload into Unsigned IPA
+        run: |
+          mkdir -p build/ios/ipa/Payload
+          cp -r build/ios/iphoneos/Runner.app build/ios/ipa/Payload/
+          cd build/ios/ipa
+          zip -qr TubeSavely-iOS-unsigned.ipa Payload
+          cd ../../..
+
+      - name: Upload iOS Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-release-ipa
+          path: build/ios/ipa/TubeSavely-iOS-unsigned.ipa
+          retention-days: 1
+
+  # ============================================================
+  # 阶段 4：macOS 产物构建
+  # ============================================================
+  build-macos:
+    name: Build macOS App
+    needs: test
+    runs-on: macos-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build macOS Application
+        run: flutter build macos --release
+
+      - name: Compress macOS Application
+        run: |
+          cd build/macos/Build/Products/Release
+          ditto -c -k --sequesterRsrc --keepParent TubeSavely.app ../../../../../TubeSavely-macOS.zip
+          cd ../../../../..
+
+      - name: Upload macOS Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-release-zip
+          path: TubeSavely-macOS.zip
+          retention-days: 1
+
+  # ============================================================
+  # 阶段 5：Windows 产物构建
+  # ============================================================
+  build-windows:
+    name: Build Windows Application
+    needs: test
+    runs-on: windows-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build Windows
+        run: flutter build windows --release
+
+      - name: Compress Windows Application
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "build\windows\x64\runner\Release\*" -DestinationPath "TubeSavely-windows-x64.zip"
+
+      - name: Upload Windows Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release-zip
+          path: TubeSavely-windows-x64.zip
+          retention-days: 1
+
+  # ============================================================
+  # 阶段 6：Linux 产物构建
+  # ============================================================
+  build-linux:
+    name: Build Linux Application
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install Linux Build Dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            clang cmake ninja-build pkg-config libgtk-3-dev libmpv-dev
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build Linux
+        run: flutter build linux --release
+
+      - name: Compress Linux Application
+        run: |
+          tar -czvf TubeSavely-linux-x64.tar.gz -C build/linux/x64/release/bundle .
+
+      - name: Upload Linux Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-release-tar
+          path: TubeSavely-linux-x64.tar.gz
+          retention-days: 1
+
+  # ============================================================
+  # 阶段 7：创建 GitHub Release 并聚合上传 5 大平台产物
+  # ============================================================
+  create-release:
+    name: Create GitHub Release
+    needs:
+      - test
+      - build-android
+      - build-ios
+      - build-macos
+      - build-windows
+      - build-linux
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Extract App Version
+        id: get_version
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: *//' | tr -d '\r\n')
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-dist
+          merge-multiple: true
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.get_version.outputs.VERSION }}-b${{ github.run_number }}
+          name: TubeSavely v${{ steps.get_version.outputs.VERSION }} (Build ${{ github.run_number }})
+          body: |
+            ### 🚀 TubeSavely Multi-Platform Release
+            - **Version:** ${{ steps.get_version.outputs.VERSION }}
+            - **Build Number:** ${{ github.run_number }}
+            - **Commit:** ${{ github.sha }}
+            - **Branch:** ${{ github.ref_name }}
+
+            #### 📦 Release Binaries:
+            - **Android:** `app-release.apk`
+            - **iOS:** `TubeSavely-iOS-unsigned.ipa`
+            - **macOS:** `TubeSavely-macOS.zip`
+            - **Windows:** `TubeSavely-windows-x64.zip`
+            - **Linux:** `TubeSavely-linux-x64.tar.gz`
+
+            > 由 GitHub Actions 自动化并发打包并发布。
+            > ✅ 静态检查与单元测试全部通过。
+          draft: false
+          prerelease: false
+          files: |
+            release-dist/app-release.apk
+            release-dist/TubeSavely-iOS-unsigned.ipa
+            release-dist/TubeSavely-macOS.zip
+            release-dist/TubeSavely-windows-x64.zip
+            release-dist/TubeSavely-linux-x64.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

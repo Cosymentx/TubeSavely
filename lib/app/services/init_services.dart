@@ -1,0 +1,123 @@
+import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
+import 'package:media_kit/media_kit.dart';
+// import 'package:ffmpeg_kit_flutter/ffmpeg_kit.dart';  // 暂时注释掉
+import '../utils/logger.dart';
+import '../data/providers/api_provider.dart';
+import '../data/providers/storage_provider.dart';
+import '../data/repositories/credit_repository.dart';
+import '../data/repositories/download_repository.dart';
+import '../data/repositories/payment_repository.dart';
+import '../data/repositories/task_repository.dart';
+import '../data/repositories/user_repository.dart';
+import '../data/repositories/video_repository.dart';
+import '../data/repositories/video_converter_repository.dart';
+import '../data/repositories/video_player_repository.dart';
+import 'theme_service.dart';
+import 'translation_service.dart';
+import 'video_parser_service.dart';
+import 'download_service.dart';
+import 'payment_service.dart';
+import 'stripe_service.dart';
+import 'apple_payment_service.dart';
+import 'video_converter_service.dart';
+import 'video_compress_service.dart';
+import 'video_player_service.dart';
+import 'user_service.dart';
+
+/// 初始化所有服务
+Future<void> initServices() async {
+  Logger.i('正在初始化服务...');
+
+  // 注册服务
+  Get.put(StorageProvider(), permanent: true);
+
+  // 初始化GetStorage
+  await GetStorage.init();
+
+  // 将GetStorage实例放入Get依赖注入容器
+  Get.put(GetStorage(), permanent: true);
+
+  // 初始化MediaKit
+  MediaKit.ensureInitialized();
+
+  // 初始化FFmpeg
+  Logger.i('正在初始化FFmpeg...');
+
+  // 初始化ScreenUtil
+  // ScreenUtil会在应用启动时自动初始化
+
+  Get.put(ApiProvider(), permanent: true);
+
+  // 初始化并注册主题服务
+  final themeService = await ThemeService().init();
+  Get.put(themeService, permanent: true);
+
+  // 注册翻译服务
+  Get.put(TranslationService(), permanent: true);
+
+  // 初始化并注册视频解析服务
+  final videoParserService = await VideoParserService().init();
+  Get.put(videoParserService, permanent: true);
+
+  // 初始化并注册下载服务
+  final downloadService = await DownloadService().init();
+  Get.put(downloadService, permanent: true);
+
+  // 初始化并注册视频转换服务
+  final videoConverterService = await VideoConverterService().init();
+  Get.put(videoConverterService, permanent: true);
+
+  // 注册视频压缩服务
+  Get.put(VideoCompressService(), permanent: true);
+
+  // 初始化并注册视频播放服务
+  final videoPlayerService = await VideoPlayerService().init();
+  Get.put(videoPlayerService, permanent: true);
+
+  // 初始化并注册用户服务
+  final userService = await UserService().init();
+  Get.put(userService, permanent: true);
+
+  // 初始化并注册Stripe服务
+  try {
+    final stripeService = await StripeService().init();
+    Get.put(stripeService, permanent: true);
+  } catch (e) {
+    Logger.e('初始化Stripe服务失败: $e');
+    // 创建一个默认的服务实例，确保依赖注入不会失败
+    Get.put(StripeService(), permanent: true);
+  }
+
+  // 初始化并注册Apple支付服务
+  try {
+    final applePaymentService = await ApplePaymentService().init();
+    Get.put(applePaymentService, permanent: true);
+  } catch (e) {
+    Logger.e('初始化Apple支付服务失败: $e');
+    // 创建一个默认的服务实例，确保依赖注入不会失败
+    Get.put(ApplePaymentService(), permanent: true);
+  }
+
+  // 初始化并注册支付服务
+  try {
+    final paymentService = await PaymentService().init();
+    Get.put(paymentService, permanent: true);
+  } catch (e) {
+    Logger.e('初始化支付服务失败: $e');
+    // 创建一个默认的服务实例，确保依赖注入不会失败
+    Get.put(PaymentService(), permanent: true);
+  }
+
+  // 注册仓库
+  Get.put(UserRepository(), permanent: true);
+  Get.put(VideoRepository(), permanent: true);
+  Get.put(DownloadRepository(), permanent: true);
+  Get.put(VideoConverterRepository(), permanent: true);
+  Get.put(VideoPlayerRepository(), permanent: true);
+  Get.put(PaymentRepository(), permanent: true);
+  Get.put(TaskRepository(), permanent: true);
+  Get.put(CreditRepository(), permanent: true);
+
+  Logger.i('所有服务初始化完成');
+}

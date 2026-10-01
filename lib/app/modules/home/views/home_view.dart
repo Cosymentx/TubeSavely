@@ -1,0 +1,1065 @@
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:get/get.dart';
+
+import '../../../data/models/video_model.dart';
+import '../../../theme/app_colors.dart';
+import '../../../theme/app_spacing.dart';
+import '../../../theme/app_text_styles.dart';
+import '../../../utils/utils.dart';
+import '../../../widgets/adaptive/adaptive_scaffold.dart';
+import '../controllers/home_controller.dart';
+
+class HomeView extends GetView<HomeController> {
+  const HomeView({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return AdaptiveScaffold(
+      body: SafeArea(
+        top: false,
+        child: _buildBody(),
+      ),
+    );
+  }
+
+  Widget _buildBody() {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.lg,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildUrlInput(),
+            SizedBox(height: 24.h),
+            _buildQuickActions(),
+            SizedBox(height: 24.h),
+            _buildTrendingVideos(),
+            SizedBox(height: 24.h),
+            _buildDownloadOptions(),
+            SizedBox(height: 24.h),
+            _buildSupportedPlatforms(),
+            SizedBox(height: 24.h),
+            _buildVideoTools(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 视频工具区
+  Widget _buildVideoTools() {
+    return Container(
+      padding: EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: Get.theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryLight5,
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: Border.all(
+          color: AppColors.primaryLight10,
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.build_circle,
+                color: AppColors.primary,
+                size: 20.sp,
+              ),
+              SizedBox(width: 8.w),
+              Text(
+                '视频工具',
+                style: TextStyle(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.bold,
+                  foreground: Paint()
+                    ..shader = LinearGradient(
+                      colors: [
+                        AppColors.primary,
+                        AppColors.accent,
+                      ],
+                    ).createShader(Rect.fromLTWH(0, 0, 120.w, 24.h)),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 16.h),
+          Row(
+            children: [
+              Expanded(
+                child: _buildToolCard(
+                  icon: Icons.transform,
+                  title: '格式转换',
+                  subtitle: '转换视频格式',
+                  onTap: () => Get.toNamed('/convert'),
+                ),
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: _buildToolCard(
+                  icon: Icons.compress,
+                  title: '视频压缩',
+                  subtitle: '智能批量瘦身',
+                  onTap: () => Get.toNamed('/compress'),
+                ),
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: _buildToolCard(
+                  icon: Icons.video_settings,
+                  title: '视频编辑',
+                  subtitle: '剪辑、合并',
+                  onTap: () => Utils.showSnackbar('提示', '该功能即将上线，敬请期待'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 工具卡片
+  Widget _buildToolCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.all(AppSpacing.lg),
+        decoration: BoxDecoration(
+          color: Get.theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+          border: Border.all(
+            color: AppColors.primaryLight10,
+            width: 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: EdgeInsets.all(AppSpacing.sm),
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight25,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+              ),
+              child: Icon(
+                icon,
+                color: AppColors.primary,
+                size: AppSpacing.iconMd,
+              ),
+            ),
+            SizedBox(height: AppSpacing.md),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 4.h),
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 12.sp,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 顶部导航栏
+  Widget _buildAppBar() {
+    return AppBar(
+      elevation: 0,
+      titleSpacing: 16.w,
+      title: Text(
+        'TubeSavely',
+        style: AppTextStyles.titleLarge.copyWith(
+          foreground: Paint()
+            ..shader = LinearGradient(
+              colors: [
+                AppColors.primary,
+                AppColors.accent,
+              ],
+            ).createShader(Rect.fromLTWH(0, 0, 200.w, 70.h)),
+        ),
+      ),
+      actions: [
+        IconButton(
+          icon: Icon(Icons.history, size: 22.sp),
+          onPressed: () => Get.toNamed('/history'),
+          padding: EdgeInsets.all(8.w),
+          constraints: const BoxConstraints(),
+        ),
+        SizedBox(width: 4.w),
+        IconButton(
+          icon: Icon(Icons.download, size: 22.sp),
+          onPressed: () => Get.toNamed('/tasks'),
+          padding: EdgeInsets.all(8.w),
+          constraints: const BoxConstraints(),
+        ),
+        SizedBox(width: 4.w),
+        IconButton(
+          icon: Icon(Icons.settings, size: 22.sp),
+          onPressed: () => Get.toNamed('/settings'),
+          padding: EdgeInsets.all(8.w),
+          constraints: const BoxConstraints(),
+        ),
+        SizedBox(width: 8.w),
+      ],
+    );
+  }
+
+  // URL输入框
+  Widget _buildUrlInput() {
+    return Obx(() {
+      return Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primaryLight10,
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: TextField(
+          controller: controller.urlController,
+          decoration: InputDecoration(
+            hintText: '输入视频链接...',
+            hintStyle: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 14.sp,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              borderSide: BorderSide.none,
+            ),
+            filled: true,
+            fillColor: Get.theme.colorScheme.surface,
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.lg,
+            ),
+            suffixIcon: Container(
+              margin: EdgeInsets.all(AppSpacing.xs),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.primary,
+                    AppColors.accent,
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primaryLight10,
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: controller.isLoading.value
+                  ? Padding(
+                      padding: EdgeInsets.all(8.w),
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.onPrimary),
+                        strokeWidth: 2.w,
+                      ),
+                    )
+                  : IconButton(
+                      icon: Icon(
+                        Icons.download,
+                        color: AppColors.onPrimary,
+                        size: 20.sp,
+                      ),
+                      onPressed: controller.parseVideo,
+                    ),
+            ),
+          ),
+          style: TextStyle(
+            fontSize: 14.sp,
+            color: Get.theme.colorScheme.onSurface,
+          ),
+          onSubmitted: (_) => controller.parseVideo(),
+        ),
+      );
+    });
+  }
+
+  // 快捷功能区
+  Widget _buildQuickActions() {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildActionCard(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xFF8B5CF6),
+                Color(0xFF7C3AED),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            icon: Icons.workspace_premium,
+            title: '升级会员',
+            subtitle: '享受更多特权',
+            onTap: () => controller.goToMembership(),
+          ),
+        ),
+        SizedBox(width: 16.w),
+        Expanded(
+          child: _buildActionCard(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xFF3B82F6),
+                Color(0xFF0EA5E9),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            icon: Icons.monetization_on,
+            title: '充值积分',
+            subtitle: '畅享下载体验',
+            onTap: () => controller.goToCredits(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // 快捷功能卡片
+  Widget _buildActionCard({
+    required LinearGradient gradient,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.all(16.w),
+        decoration: BoxDecoration(
+          gradient: gradient,
+          borderRadius: BorderRadius.circular(16.r),
+          boxShadow: [
+            BoxShadow(
+              color: gradient.colors.first.withAlpha(77),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40.w,
+              height: 40.w,
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(51),
+                borderRadius: BorderRadius.circular(12.r),
+              ),
+              child: Icon(
+                icon,
+                color: Colors.white,
+                size: 24.sp,
+              ),
+            ),
+            SizedBox(width: 12.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 2.h),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: Colors.white.withAlpha(204),
+                      fontSize: 12.sp,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 下载选项
+  Widget _buildDownloadOptions() {
+    return Obx(() {
+      if (controller.currentVideo.value == null) {
+        return SizedBox.shrink();
+      }
+
+      return Container(
+        padding: EdgeInsets.all(16.w),
+        decoration: BoxDecoration(
+          color: Get.theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(16.r),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(13),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+          border: Border.all(
+            color: AppColors.primary.withAlpha(26),
+            width: 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.tune,
+                  color: AppColors.primary,
+                  size: 20.sp,
+                ),
+                SizedBox(width: 8.w),
+                Text(
+                  '下载选项',
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                    foreground: Paint()
+                      ..shader = LinearGradient(
+                        colors: [
+                          AppColors.primary,
+                          AppColors.accent,
+                        ],
+                      ).createShader(Rect.fromLTWH(0, 0, 120.w, 24.h)),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 16.h),
+            // 视频信息
+            if (controller.currentVideo.value != null) _buildVideoInfo(controller.currentVideo.value!),
+            SizedBox(height: 16.h),
+            // 清晰度选择
+            Text(
+              '清晰度',
+              style: TextStyle(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w500,
+                color: Get.theme.colorScheme.onSurface,
+              ),
+            ),
+            SizedBox(height: 8.h),
+            _buildQualityOptions(),
+            SizedBox(height: 16.h),
+            // 格式选择
+            Text(
+              '格式',
+              style: TextStyle(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w500,
+                color: Get.theme.colorScheme.onSurface,
+              ),
+            ),
+            SizedBox(height: 8.h),
+            _buildFormatOptions(),
+            SizedBox(height: 16.h),
+            // 下载按钮
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: controller.downloadVideo,
+                style: ElevatedButton.styleFrom(
+                  padding: EdgeInsets.symmetric(vertical: 12.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                  backgroundColor: AppColors.primary,
+                ),
+                child: Text(
+                  '开始下载',
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.onPrimary,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  // 视频信息
+  Widget _buildVideoInfo(VideoModel video) {
+    return Container(
+      padding: EdgeInsets.all(12.w),
+      decoration: BoxDecoration(
+        color: Get.theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(12.r),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 缩略图
+          if (video.thumbnail != null)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8.r),
+              child: CachedNetworkImage(
+                imageUrl: video.thumbnail!,
+                width: 80.w,
+                height: 60.h,
+                fit: BoxFit.cover,
+                placeholder: (context, url) => Container(
+                  color: AppColors.surfaceVariant,
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.w,
+                    ),
+                  ),
+                ),
+                errorWidget: (context, url, error) => Container(
+                  color: AppColors.surfaceVariant,
+                  child: Icon(
+                    Icons.error,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+            )
+          else
+            Container(
+              width: 80.w,
+              height: 60.h,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceVariant,
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+              child: Icon(
+                Icons.video_library,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          SizedBox(width: 12.w),
+          // 视频信息
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  video.title,
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w500,
+                    color: Get.theme.colorScheme.onSurface,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: 4.h),
+                if (video.platform != null)
+                  Text(
+                    '来源: ${video.platform}',
+                    style: TextStyle(
+                      fontSize: 12.sp,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                if (video.duration != null)
+                  Text(
+                    '时长: ${video.duration! ~/ 60}:${(video.duration! % 60).toString().padLeft(2, '0')}',
+                    style: TextStyle(
+                      fontSize: 12.sp,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 清晰度选项
+  Widget _buildQualityOptions() {
+    return Wrap(
+      spacing: 8.w,
+      runSpacing: 8.h,
+      children: [
+        _buildOptionButton(
+          label: '1080P',
+          isSelected: controller.selectedQuality.value == '1080P',
+          onTap: () => controller.setQuality('1080P'),
+        ),
+        _buildOptionButton(
+          label: '720P',
+          isSelected: controller.selectedQuality.value == '720P',
+          onTap: () => controller.setQuality('720P'),
+        ),
+        _buildOptionButton(
+          label: '480P',
+          isSelected: controller.selectedQuality.value == '480P',
+          onTap: () => controller.setQuality('480P'),
+        ),
+      ],
+    );
+  }
+
+  // 格式选项
+  Widget _buildFormatOptions() {
+    return Wrap(
+      spacing: 8.w,
+      runSpacing: 8.h,
+      children: [
+        _buildOptionButton(
+          label: 'MP4',
+          isSelected: controller.selectedFormat.value == 'MP4',
+          onTap: () => controller.setFormat('MP4'),
+        ),
+        _buildOptionButton(
+          label: 'MKV',
+          isSelected: controller.selectedFormat.value == 'MKV',
+          onTap: () => controller.setFormat('MKV'),
+        ),
+        _buildOptionButton(
+          label: 'MP3',
+          isSelected: controller.selectedFormat.value == 'MP3',
+          onTap: () => controller.setFormat('MP3'),
+        ),
+      ],
+    );
+  }
+
+  // 选项按钮
+  Widget _buildOptionButton({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: 16.w,
+          vertical: 10.h,
+        ),
+        decoration: BoxDecoration(
+          gradient: isSelected
+              ? LinearGradient(
+                  colors: [
+                    AppColors.primary,
+                    AppColors.accent,
+                  ],
+                )
+              : null,
+          color: isSelected ? null : Get.theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(12.r),
+          border: isSelected
+              ? null
+              : Border.all(
+                  color: AppColors.border,
+                ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.primary.withAlpha(76),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 14.sp,
+            fontWeight: FontWeight.w500,
+            color: isSelected ? AppColors.onPrimary : AppColors.textPrimary,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 热门视频
+  Widget _buildTrendingVideos() {
+    return Obx(() {
+      if (controller.trendingVideos.isEmpty) {
+        return const SizedBox.shrink();
+      }
+
+      return Container(
+        padding: EdgeInsets.all(16.w),
+        decoration: BoxDecoration(
+          color: Get.theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(16.r),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.shadow,
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+          border: Border.all(
+            color: AppColors.primary.withAlpha(26),
+            width: 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.trending_up,
+                      color: AppColors.primary,
+                      size: 20.sp,
+                    ),
+                    SizedBox(width: 8.w),
+                    Text(
+                      '热门视频',
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.bold,
+                        foreground: Paint()
+                          ..shader = LinearGradient(
+                            colors: [
+                              AppColors.primary,
+                              AppColors.accent,
+                            ],
+                          ).createShader(Rect.fromLTWH(0, 0, 120.w, 24.h)),
+                      ),
+                    ),
+                  ],
+                ),
+                TextButton(
+                  onPressed: () {
+                    // 查看更多热门视频
+                  },
+                  child: Text(
+                    '查看更多',
+                    style: TextStyle(
+                      fontSize: 12.sp,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 16.h),
+            SizedBox(
+              height: 180.h,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: controller.trendingVideos.length,
+                itemBuilder: (context, index) {
+                  final video = controller.trendingVideos[index];
+                  return GestureDetector(
+                    onTap: () => controller.openVideoDetail(video),
+                    child: Container(
+                      width: 160.w,
+                      margin: EdgeInsets.only(right: 12.w),
+                      decoration: BoxDecoration(
+                        color: Get.theme.colorScheme.surface,
+                        borderRadius: BorderRadius.circular(12.r),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.shadow,
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // 缩略图
+                          ClipRRect(
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(12.r),
+                              topRight: Radius.circular(12.r),
+                            ),
+                            child: Stack(
+                              children: [
+                                CachedNetworkImage(
+                                  imageUrl: video.thumbnail ?? '',
+                                  width: 160.w,
+                                  height: 90.h,
+                                  fit: BoxFit.cover,
+                                  placeholder: (context, url) => Container(
+                                    color: AppColors.surfaceVariant,
+                                    child: const Center(
+                                      child: CircularProgressIndicator(),
+                                    ),
+                                  ),
+                                  errorWidget: (context, url, error) => Container(
+                                    color: AppColors.surfaceVariant,
+                                    child: Icon(
+                                      Icons.error,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ),
+                                // 时长
+                                if (video.duration != null)
+                                  Positioned(
+                                    right: 8.w,
+                                    bottom: 8.h,
+                                    child: Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 6.w,
+                                        vertical: 2.h,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withAlpha(179),
+                                        borderRadius: BorderRadius.circular(4.r),
+                                      ),
+                                      child: Text(
+                                        '${video.duration! ~/ 60}:${(video.duration! % 60).toString().padLeft(2, '0')}',
+                                        style: TextStyle(
+                                          color: AppColors.onPrimary,
+                                          fontSize: 10.sp,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          // 视频信息
+                          Padding(
+                            padding: EdgeInsets.all(8.w),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  video.title,
+                                  style: TextStyle(
+                                    fontSize: 12.sp,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                SizedBox(height: 4.h),
+                                Text(
+                                  video.author ?? '未知作者',
+                                  style: TextStyle(
+                                    fontSize: 10.sp,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                SizedBox(height: 4.h),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.play_arrow,
+                                      size: 12.sp,
+                                      color: AppColors.primary,
+                                    ),
+                                    SizedBox(width: 2.w),
+                                    Text(
+                                      '${(index + 1) * 1000 + 500}次播放',
+                                      style: TextStyle(
+                                        fontSize: 10.sp,
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  // 支持的平台
+  Widget _buildSupportedPlatforms() {
+    return Obx(() {
+      if (controller.supportedPlatforms.isEmpty) {
+        return const SizedBox.shrink();
+      }
+
+      return Container(
+        padding: EdgeInsets.all(16.w),
+        decoration: BoxDecoration(
+          color: Get.theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(16.r),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(13), // 0.05 透明度
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+          border: Border.all(
+            color: AppColors.primary.withAlpha(26),
+            width: 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.language,
+                  color: AppColors.primary,
+                  size: 20.sp,
+                ),
+                SizedBox(width: 8.w),
+                Text(
+                  '支持的平台',
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                    foreground: Paint()
+                      ..shader = LinearGradient(
+                        colors: [
+                          AppColors.primary,
+                          AppColors.accent,
+                        ],
+                      ).createShader(Rect.fromLTWH(0, 0, 120.w, 24.h)),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 16.h),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4,
+                crossAxisSpacing: 16.w,
+                mainAxisSpacing: 16.h,
+                childAspectRatio: 0.8,
+              ),
+              itemCount: controller.supportedPlatforms.length,
+              itemBuilder: (context, index) {
+                final platform = controller.supportedPlatforms[index];
+                return _buildPlatformItem(
+                  name: platform['name'] ?? '',
+                  icon: platform['icon'] ?? '',
+                );
+              },
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  // 平台项
+  Widget _buildPlatformItem({
+    required String name,
+    required String icon,
+  }) {
+    return Column(
+      children: [
+        Container(
+          width: 50.w,
+          height: 50.w,
+          decoration: BoxDecoration(
+            color: Get.theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(12.r),
+            border: Border.all(
+              color: AppColors.primary.withAlpha(26),
+              width: 1,
+            ),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12.r),
+            child: icon.startsWith('http')
+                ? CachedNetworkImage(
+                    imageUrl: icon,
+                    width: 30.w,
+                    height: 30.w,
+                    fit: BoxFit.contain,
+                    placeholder: (context, url) => Center(
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.w,
+                      ),
+                    ),
+                    errorWidget: (context, url, error) => Icon(
+                      Icons.language,
+                      color: Colors.grey[500],
+                      size: 30.sp,
+                    ),
+                  )
+                : Image.asset(
+                    icon,
+                    width: 30.w,
+                    height: 30.w,
+                    fit: BoxFit.contain,
+                  ),
+          ),
+        ),
+        SizedBox(height: 4.h),
+        Text(
+          name,
+          style: TextStyle(
+            fontSize: 10.sp,
+            fontWeight: FontWeight.w500,
+            color: Get.theme.colorScheme.onSurface,
+          ),
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
+  }
+}

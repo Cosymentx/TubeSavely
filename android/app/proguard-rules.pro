@@ -33,6 +33,7 @@
 -keepattributes *Annotation*,InnerClasses
 -keepattributes Signature
 -keepattributes SourceFile,LineNumberTable
+-keep class javax.xml.stream.XMLStreamException.**{*;}
 
 #如果引用了v4或者v7包
 -dontwarn android.support.**
@@ -274,6 +275,12 @@
 -keep class io.flutter.**  { *; }
 -keep class io.flutter.plugins.**  { *; }
 
+-dontwarn com.stripe.android.pushProvisioning.PushProvisioningActivity$g
+-dontwarn com.stripe.android.pushProvisioning.PushProvisioningActivityStarter$Args
+-dontwarn com.stripe.android.pushProvisioning.PushProvisioningActivityStarter$Error
+-dontwarn com.stripe.android.pushProvisioning.PushProvisioningActivityStarter
+-dontwarn com.stripe.android.pushProvisioning.PushProvisioningEphemeralKeyProvider
+
 
 #忽略警告
 -dontwarn com.fm.openinstall.**
@@ -281,3 +288,4 @@
 #避免混淆
 -keep public class com.fm.openinstall.** {*; }
 -keep public interface com.fm.openinstall.** {*; }
+-dontwarn javax.xml.stream.XMLStreamException
