@@ -279,7 +279,10 @@ class _DesktopSettingDialogState extends State<DesktopSettingDialog> {
           launchUrl(Uri.parse(Constants.WEB_URL), mode: LaunchMode.externalApplication);
         }),
         _buildLinkItem('privacy_policy'.tr, () {
-          launchUrl(Uri.parse('https://tubesavely.com/privacy'), mode: LaunchMode.externalApplication);
+          launchUrl(Uri.parse(Constants.PRIVACY_URL), mode: LaunchMode.externalApplication);
+        }),
+        _buildLinkItem('terms_of_service'.tr, () {
+          launchUrl(Uri.parse(Constants.TERMS_URL), mode: LaunchMode.externalApplication);
         }),
         _buildLinkItem('about_us'.tr, () {
           showDialog(

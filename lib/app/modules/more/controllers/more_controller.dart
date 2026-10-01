@@ -23,8 +23,8 @@ class MoreController extends GetxController {
   final String developerName = 'TubeSavely Team';
   final String developerEmail = 'support@tubesavely.com';
   final String websiteUrl = Constants.WEB_URL;
-  final String privacyPolicyUrl = 'https://tubesavely.vercel.app/privacy';
-  final String termsOfServiceUrl = 'https://tubesavely.vercel.app/terms';
+  final String privacyPolicyUrl = Constants.PRIVACY_URL;
+  final String termsOfServiceUrl = Constants.TERMS_URL;
 
   // 社交媒体链接
   final String githubUrl = 'https://github.com/tubesavely';
