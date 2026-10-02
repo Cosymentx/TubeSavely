@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
 import 'package:get/get.dart';
@@ -11,9 +12,32 @@ import 'storage_provider.dart';
 /// 负责与后端API通信，提供各种API请求方法
 class ApiProvider extends GetConnect {
   String? _authToken;
+  Future<void> Function()? _unauthorizedHandler;
+  bool _handlingUnauthorized = false;
 
   void setAuthToken(String? token) {
     _authToken = token;
+  }
+
+  void setUnauthorizedHandler(Future<void> Function()? handler) {
+    _unauthorizedHandler = handler;
+  }
+
+  Future<void> _handleUnauthorized() async {
+    if (_handlingUnauthorized) return;
+    _handlingUnauthorized = true;
+    try {
+      _authToken = null;
+      await Get.find<StorageProvider>().clearUserToken();
+      if (_unauthorizedHandler != null) {
+        await _unauthorizedHandler!();
+      }
+      if (GetPlatform.isMobile) {
+        Get.offAllNamed('/login');
+      }
+    } finally {
+      _handlingUnauthorized = false;
+    }
   }
 
   @override
@@ -40,12 +64,7 @@ class ApiProvider extends GetConnect {
     httpClient.addResponseModifier<dynamic>((request, response) {
       // 处理响应
       if (response.status.isUnauthorized) {
-        // 处理401未授权错误：清除本地令牌，仅在移动端重定向
-        _authToken = null;
-        Get.find<StorageProvider>().clearUserToken();
-        if (GetPlatform.isMobile) {
-          Get.offAllNamed('/login');
-        }
+        unawaited(_handleUnauthorized());
       }
 
       return response;
