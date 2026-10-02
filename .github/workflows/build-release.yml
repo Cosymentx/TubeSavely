@@ -344,7 +344,7 @@ jobs:
           ls -la release-dist || true
 
       - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ steps.get_version.outputs.VERSION }}-b${{ github.run_number }}
           name: TubeSavely v${{ steps.get_version.outputs.VERSION }} (Build ${{ github.run_number }})
