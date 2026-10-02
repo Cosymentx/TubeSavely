@@ -35,9 +35,9 @@ class UserService extends GetxService {
     isLoggedIn.value = token != null && token.isNotEmpty;
     _apiProvider.setAuthToken(token);
 
-    // 如果已登录，异步获取用户信息，不阻塞启动
+    // 有本地 token 时主动向服务器校验一次；401 会走统一会话清理。
     if (isLoggedIn.value) {
-      getUserInfo();
+      getUserInfo(forceRemote: true);
     }
 
     return this;
@@ -170,18 +170,18 @@ class UserService extends GetxService {
   /// 获取用户信息
   ///
   /// 返回用户信息，获取失败返回null
-  Future<UserModel?> getUserInfo() async {
+  Future<UserModel?> getUserInfo({bool forceRemote = false}) async {
     try {
       Logger.d('Getting user info');
 
-      // 先尝试从本地获取
+      // 非强制刷新时优先使用本地缓存。
       UserModel? user = _storageProvider.getUserInfo();
-      if (user != null) {
+      if (!forceRemote && user != null) {
         currentUser.value = user;
         return user;
       }
 
-      // 如果本地没有，则从API获取
+      // 启动校验或本地无缓存时从 API 获取
       final response = await _apiProvider.getUserInfo();
       Logger.d('Get user info response received');
 
