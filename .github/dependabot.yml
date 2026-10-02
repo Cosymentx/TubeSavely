@@ -27,6 +27,13 @@ updates:
       time: "02:15"
       timezone: "Asia/Shanghai"
     open-pull-requests-limit: 5
+    groups:
+      android-dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -37,3 +44,10 @@ updates:
       time: "02:30"
       timezone: "Asia/Shanghai"
     open-pull-requests-limit: 5
+    groups:
+      actions-dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
