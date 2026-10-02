@@ -19,9 +19,16 @@ class UserService extends GetxService {
   // 登录状态
   final RxBool isLoggedIn = false.obs;
 
+  Future<void> _clearUnauthorizedSession() async {
+    await _storageProvider.clearUserData();
+    isLoggedIn.value = false;
+    currentUser.value = null;
+  }
+
   /// 初始化服务
   Future<UserService> init() async {
     Logger.d('UserService initialized');
+    _apiProvider.setUnauthorizedHandler(_clearUnauthorizedSession);
 
     // 检查是否已登录
     final token = await _storageProvider.getUserToken();
@@ -176,7 +183,7 @@ class UserService extends GetxService {
 
       // 如果本地没有，则从API获取
       final response = await _apiProvider.getUserInfo();
-      Logger.d("Get user info response: ${response.bodyString}");
+      Logger.d('Get user info response received');
 
       // 处理API响应
       final apiResponse =
