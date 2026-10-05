@@ -60,9 +60,11 @@ class DesktopDialogWrapper extends StatelessWidget {
               ),
             ),
             // 内容区域
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
-              child: child,
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
+                child: child,
+              ),
             ),
           ],
         ),

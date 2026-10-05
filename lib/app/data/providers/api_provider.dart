@@ -40,6 +40,8 @@ class ApiProvider extends GetConnect {
     }
   }
 
+  final GetConnect _parseClient =
+      GetConnect(timeout: const Duration(seconds: 120));
   @override
   void onInit() {
     httpClient.baseUrl = Constants.API_BASE_URL;
@@ -167,9 +169,21 @@ class ApiProvider extends GetConnect {
   /// 解析视频链接
   ///
   /// [url] 视频链接
-  Future<Response<dynamic>> parseVideo(String url) {
-    Logger.d('Parsing video from ${Constants.API_BASE_URL}: $url');
-    return get('/api/v1/videos/parse', query: {'url': url});
+  Future<Response<dynamic>> parseVideo(String url) async {
+    final token =
+        _authToken ?? await Get.find<StorageProvider>().getUserToken();
+    final response = await _parseClient.get<dynamic>(
+      '${Constants.API_BASE_URL}/api/v1/videos/parse',
+      query: {'url': url},
+      headers: {
+        'Accept': 'application/json',
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+    );
+    if (response.status.isUnauthorized) {
+      await _handleUnauthorized();
+    }
+    return response;
   }
 
   /// 获取视频信息

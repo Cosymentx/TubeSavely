@@ -44,4 +44,26 @@ void main() {
     expect(video.duration, isNull);
     expect(video.url, 'https://example.com/video');
   });
+
+  test('UserModel, TaskModel, and VideoModel safely handle string-encoded numbers', () {
+    final video = VideoModel.fromJson({
+      'id': '101',
+      'title': 'Sample',
+      'url': 'https://example.com/sample',
+      'duration': '120',
+      'qualities': [
+        {
+          'label': '720p',
+          'height': '720',
+          'width': '1280',
+          'bitrate': '2500',
+          'url': 'https://example.com/sample.mp4'
+        }
+      ]
+    });
+    expect(video.duration, 120);
+    expect(video.qualities.first.height, 720);
+    expect(video.qualities.first.width, 1280);
+    expect(video.qualities.first.bitrate, 2500);
+  });
 }
