@@ -1,3 +1,7 @@
+int? _number(dynamic value) => value is num
+    ? value.toInt()
+    : num.tryParse(value?.toString() ?? '')?.toInt();
+
 /// 积分模型
 class CreditModel {
   final int? id;
@@ -21,16 +25,16 @@ class CreditModel {
   /// 从JSON创建积分模型
   factory CreditModel.fromJson(Map<String, dynamic> json) {
     return CreditModel(
-      id: json['id'],
-      userId: json['user_id'] ?? 0,
-      balance: json['balance'] ?? 0,
-      totalEarned: json['total_earned'] ?? 0,
-      totalSpent: json['total_spent'] ?? 0,
+      id: _number(json['id']),
+      userId: _number(json['user_id']) ?? 0,
+      balance: _number(json['balance']) ?? 0,
+      totalEarned: _number(json['total_earned']) ?? 0,
+      totalSpent: _number(json['total_spent']) ?? 0,
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
+          ? DateTime.tryParse(json['created_at'].toString())
           : null,
       updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'])
+          ? DateTime.tryParse(json['updated_at'].toString())
           : null,
     );
   }
@@ -91,13 +95,13 @@ class CreditHistoryModel {
   /// 从JSON创建积分历史记录模型
   factory CreditHistoryModel.fromJson(Map<String, dynamic> json) {
     return CreditHistoryModel(
-      id: json['id'],
-      userId: json['user_id'] ?? 0,
-      amount: json['amount'] ?? 0,
-      action: json['action'] ?? '',
-      description: json['description'],
+      id: _number(json['id']),
+      userId: _number(json['user_id']) ?? 0,
+      amount: _number(json['amount']) ?? 0,
+      action: json['action']?.toString() ?? '',
+      description: json['description']?.toString(),
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
+          ? (DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now())
           : DateTime.now(),
     );
   }
@@ -144,19 +148,21 @@ class CreditAmountModel {
   /// 从JSON创建积分套餐模型
   factory CreditAmountModel.fromJson(Map<String, dynamic> json) {
     return CreditAmountModel(
-      id: json['id'],
+      id: _number(json['id']),
       title: json['title'] ?? '',
       description: json['description'],
-      amount: json['amount'] ?? 0,
-      price: (json['price'] is num) ? (json['price'] as num).toDouble() : 0.0,
+      amount: _number(json['amount']) ?? 0,
+      price: (json['price'] is num)
+          ? (json['price'] as num).toDouble()
+          : (double.tryParse(json['price']?.toString() ?? '') ?? 0.0),
       currency: json['currency'] ?? 'CNY',
-      isActive: json['is_active'] ?? true,
-      isPopular: json['is_popular'] ?? false,
+      isActive: json['is_active'] == true || json['is_active'] == 1,
+      isPopular: json['is_popular'] == true || json['is_popular'] == 1,
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
+          ? DateTime.tryParse(json['created_at'].toString())
           : null,
       updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'])
+          ? DateTime.tryParse(json['updated_at'].toString())
           : null,
     );
   }

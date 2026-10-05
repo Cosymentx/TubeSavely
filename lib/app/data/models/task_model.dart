@@ -13,6 +13,10 @@ enum TaskType {
   generate,  // 生成任务
 }
 
+int? _number(dynamic value) => value is num
+    ? value.toInt()
+    : num.tryParse(value?.toString() ?? '')?.toInt();
+
 /// 任务模型
 class TaskModel {
   final int? id;
@@ -54,28 +58,30 @@ class TaskModel {
   /// 从JSON创建任务模型
   factory TaskModel.fromJson(Map<String, dynamic> json) {
     return TaskModel(
-      id: json['id'],
+      id: _number(json['id']),
       title: json['title'] ?? '',
       description: json['description'],
       type: _parseTaskType(json['type'] ?? 'convert'),
       status: _parseTaskStatus(json['status'] ?? 'pending'),
-      creditsCost: json['credits_cost'] ?? 0,
+      creditsCost: _number(json['credits_cost']) ?? 0,
       inputUrl: json['input_url'],
       inputParams: json['input_params'],
       outputUrl: json['output_url'],
       outputFormat: json['output_format'],
-      progress: (json['progress'] is num) ? (json['progress'] as num).toDouble() : 0.0,
+      progress: (json['progress'] is num)
+          ? (json['progress'] as num).toDouble()
+          : (double.tryParse(json['progress']?.toString() ?? '') ?? 0.0),
       errorMessage: json['error_message'],
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
+          ? (DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now())
           : DateTime.now(),
       updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'])
+          ? DateTime.tryParse(json['updated_at'].toString())
           : null,
       completedAt: json['completed_at'] != null
-          ? DateTime.parse(json['completed_at'])
+          ? DateTime.tryParse(json['completed_at'].toString())
           : null,
-      userId: json['user_id'],
+      userId: _number(json['user_id']),
     );
   }
 

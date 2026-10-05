@@ -6,6 +6,10 @@ import '../data/providers/api_provider.dart';
 import '../utils/constants.dart';
 import '../utils/logger.dart';
 
+int? _number(dynamic value) => value is num
+    ? value.toInt()
+    : num.tryParse(value?.toString() ?? '')?.toInt();
+
 /// 视频解析服务
 ///
 /// 负责解析不同平台的视频链接，提取视频信息
@@ -323,7 +327,7 @@ class VideoParserService extends GetxService {
                 authorUrl: data['owner']?['mid'] != null
                     ? 'https://space.bilibili.com/${data['owner']['mid']}'
                     : null,
-                duration: data['duration'] as int?,
+                duration: _number(data['duration']),
                 createdAt: DateTime.now(),
               );
             }

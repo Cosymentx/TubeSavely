@@ -1,6 +1,7 @@
 # OS / editors
 .DS_Store
 .idea/
+.roo/
 *.iml
 .vscode/
 

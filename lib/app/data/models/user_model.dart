@@ -1,3 +1,7 @@
+int? _number(dynamic value) => value is num
+    ? value.toInt()
+    : num.tryParse(value?.toString() ?? '')?.toInt();
+
 class UserModel {
   final int? id;
   final String? userId;
@@ -37,28 +41,28 @@ class UserModel {
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      id: json['id'],
-      userId: json['user_id'],
-      username: json['username'],
-      email: json['email'],
-      avatar: json['avatar'],
-      bio: json['bio'],
-      credits: json['credits'] ?? 0,
-      level: json['level'] ?? 0,
+      id: _number(json['id']),
+      userId: (json['user_id'] ?? json['userId'] ?? json['id'])?.toString(),
+      username: json['username']?.toString(),
+      email: json['email']?.toString(),
+      avatar: json['avatar']?.toString(),
+      bio: json['bio']?.toString(),
+      credits: _number(json['credits']) ?? 0,
+      level: _number(json['level']) ?? 0,
       membershipExpiry: json['membership_expiry'] != null
-          ? DateTime.parse(json['membership_expiry'])
+          ? DateTime.tryParse(json['membership_expiry'].toString())
           : null,
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
+          ? DateTime.tryParse(json['created_at'].toString())
           : null,
       updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'])
+          ? DateTime.tryParse(json['updated_at'].toString())
           : null,
-      isActive: json['is_active'] ?? true,
-      isSuperuser: json['is_superuser'] ?? false,
-      oauthProvider: json['oauth_provider'],
-      oauthId: json['oauth_id'],
-      hasPassword: json['has_password'] ?? false,
+      isActive: json['is_active'] == true || json['is_active'] == 1,
+      isSuperuser: json['is_superuser'] == true || json['is_superuser'] == 1,
+      oauthProvider: json['oauth_provider']?.toString(),
+      oauthId: json['oauth_id']?.toString(),
+      hasPassword: json['has_password'] == true || json['has_password'] == 1,
     );
   }
 

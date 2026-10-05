@@ -20,17 +20,24 @@ class VideoRepository {
       // 如果用户已登录，优先调用后台解析接口获取完整画质与直链
       if (hasToken) {
         Logger.d('User logged in, trying backend API first for parsing: $url');
-        final response = await _apiProvider.parseVideo(url);
-        if (response.status.isOk && response.body != null) {
-          final body = response.body;
-          if (body is Map<String, dynamic>) {
-            if (body['code'] == 200 && body['data'] is Map<String, dynamic>) {
-              return VideoModel.fromJson(body['data'] as Map<String, dynamic>);
-            }
-            if (body.containsKey('title') || body.containsKey('qualities')) {
-              return VideoModel.fromJson(body);
+        try {
+          final response = await _apiProvider.parseVideo(url);
+          if (response.status.isOk && response.body != null) {
+            final body = response.body;
+            if (body is Map) {
+              final map = Map<String, dynamic>.from(body);
+              final code = map['code'];
+              final data = map['data'];
+              if ((code == 200 || code == '200' || code == null) && data is Map) {
+                return VideoModel.fromJson(Map<String, dynamic>.from(data));
+              }
+              if (map.containsKey('title') || map.containsKey('qualities')) {
+                return VideoModel.fromJson(map);
+              }
             }
           }
+        } catch (apiError) {
+          Logger.w('Backend API parsing error: $apiError, falling back');
         }
         Logger.d(
             'Backend API parse failed or returned empty, falling back to VideoParserService');
@@ -46,15 +53,24 @@ class VideoRepository {
       // 如果未登录或本地解析服务未成功，尝试调用API解析
       if (!hasToken) {
         Logger.d('Falling back to API for video parsing');
-        final response = await _apiProvider.parseVideo(url);
-        if (response.status.isOk && response.body != null) {
-          final body = response.body;
-          if (body is Map<String, dynamic>) {
-            if (body['code'] == 200 && body['data'] is Map<String, dynamic>) {
-              return VideoModel.fromJson(body['data'] as Map<String, dynamic>);
+        try {
+          final response = await _apiProvider.parseVideo(url);
+          if (response.status.isOk && response.body != null) {
+            final body = response.body;
+            if (body is Map) {
+              final map = Map<String, dynamic>.from(body);
+              final code = map['code'];
+              final data = map['data'];
+              if ((code == 200 || code == '200' || code == null) && data is Map) {
+                return VideoModel.fromJson(Map<String, dynamic>.from(data));
+              }
+              if (map.containsKey('title') || map.containsKey('qualities')) {
+                return VideoModel.fromJson(map);
+              }
             }
-            return VideoModel.fromJson(body);
           }
+        } catch (apiError) {
+          Logger.w('Fallback API parsing error: $apiError');
         }
       }
 
