@@ -8,6 +8,8 @@ import '../utils/logger.dart';
 ///
 /// 负责管理应用主题
 class ThemeService extends GetxService {
+  static ThemeService get to => Get.find<ThemeService>();
+
   final StorageProvider _storageProvider = Get.find<StorageProvider>();
   
   // 当前主题模式

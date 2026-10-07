@@ -161,7 +161,7 @@ class HomeController extends GetxController {
   }
 
   // 加载热门视频
-  Future<void> _loadTrendingVideos() async {
+  Future<void> loadTrendingVideos() async {
     try {
       final videos = await _videoRepository.getTrendingVideos();
       trendingVideos.value = videos;
@@ -169,6 +169,10 @@ class HomeController extends GetxController {
       Logger.e('加载热门视频时出错: $e');
     }
   }
+
+  Future<void> refreshTrendingVideos() => loadTrendingVideos();
+
+  Future<void> _loadTrendingVideos() => loadTrendingVideos();
 
   // 打开视频详情
   void openVideoDetail(VideoModel video) {
