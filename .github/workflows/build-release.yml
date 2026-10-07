@@ -246,8 +246,32 @@ jobs:
       - name: Install Dependencies
         run: flutter pub get
 
+      - name: Extract App Version
+        id: get_version
+        shell: pwsh
+        run: |
+          $versionLine = Select-String -Path "pubspec.yaml" -Pattern "^version:\s*(.+)"
+          if ($versionLine) {
+            $ver = $versionLine.Matches[0].Groups[1].Value.Trim()
+            $cleanVer = $ver.Split('+')[0]
+            echo "VERSION=$cleanVer" >> $env:GITHUB_OUTPUT
+          }
+
       - name: Build Windows
         run: flutter build windows --release
+
+      - name: Build Windows Installer (Inno Setup)
+        shell: pwsh
+        run: |
+          $isccPath = (Get-Command iscc -ErrorAction SilentlyContinue)?.Source
+          if (-not $isccPath -and (Test-Path "C:\Program Files (x86)\Inno Setup 6\ISCC.exe")) {
+            $isccPath = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          }
+          if (-not $isccPath) {
+            choco install innosetup -y --no-progress
+            $isccPath = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          }
+          & $isccPath "/DMyAppVersion=${{ steps.get_version.outputs.VERSION }}" "windows/installer/TubeSavely.iss"
 
       - name: Compress Windows Application
         shell: pwsh
@@ -257,8 +281,10 @@ jobs:
       - name: Upload Windows Artifact
         uses: actions/upload-artifact@v7
         with:
-          name: windows-release-zip
-          path: TubeSavely-windows-x64.zip
+          name: windows-release
+          path: |
+            TubeSavely-windows-x64-setup.exe
+            TubeSavely-windows-x64.zip
           retention-days: 1
 
   # ============================================================

@@ -1,36 +1,44 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import '../../theme/app_spacing.dart';
 import '../../utils/platform_util.dart';
+import 'responsive_layout.dart';
 
-/// 适配型 Scaffold - 同时支持 iOS 和 Android
-/// 内部自动处理平台差异，页面只需调用
+/// 适配型 Scaffold - 全平台（iOS / Android / Desktop / Web）自适应脚手架
+/// 内部自动处理平台风格差异与宽屏内容防过度拉伸
 class AdaptiveScaffold extends StatelessWidget {
-  /// Android AppBar
+  /// Android / Desktop AppBar
   final PreferredSizeWidget? appBar;
-  
+
   /// iOS CupertinoNavigationBar
   final CupertinoNavigationBar? cupertinoNavBar;
-  
+
   /// 主体内容
   final Widget body;
-  
-  /// 浮动操作按钮 (仅 Android)
+
+  /// 浮动操作按钮
   final Widget? floatingActionButton;
-  
+
   /// 底部导航栏 (Material)
   final Widget? bottomNavigationBar;
-  
+
   /// iOS 底部工具栏
   final CupertinoTabBar? cupertinoBottomTabBar;
-  
+
   /// 背景色
   final Color? backgroundColor;
-  
-  /// 抽屉菜单 (仅 Android)
+
+  /// 抽屉菜单
   final Widget? drawer;
 
+  /// 是否在宽屏桌面时约束内容最大宽度（居中防拉伸，默认 false 保证完全向后兼容）
+  final bool constrainContent;
+
+  /// 最大内容宽度（配合 constrainContent 使用，默认 1200px）
+  final double? maxContentWidth;
+
   const AdaptiveScaffold({
-    Key? key,
+    super.key,
     this.appBar,
     this.cupertinoNavBar,
     required this.body,
@@ -39,12 +47,25 @@ class AdaptiveScaffold extends StatelessWidget {
     this.cupertinoBottomTabBar,
     this.backgroundColor,
     this.drawer,
-  }) : super(key: key);
+    this.constrainContent = false,
+    this.maxContentWidth,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final bgColor = backgroundColor ?? theme.scaffoldBackgroundColor;
+
+    Widget processedBody = body;
+    if (constrainContent) {
+      processedBody = ResponsiveContainer(
+        maxWidth: maxContentWidth ?? AppSpacing.maxContentWidth,
+        child: processedBody,
+      );
+    }
+
     if (PlatformUtil.isIOS) {
-      Widget content = body;
+      Widget content = processedBody;
       if (bottomNavigationBar != null) {
         content = Column(
           children: [
@@ -55,16 +76,16 @@ class AdaptiveScaffold extends StatelessWidget {
       }
       return CupertinoPageScaffold(
         navigationBar: cupertinoNavBar,
-        backgroundColor: backgroundColor,
+        backgroundColor: bgColor,
         child: content,
       );
     } else {
       return Scaffold(
         appBar: appBar,
-        body: body,
+        body: processedBody,
         floatingActionButton: floatingActionButton,
         bottomNavigationBar: bottomNavigationBar,
-        backgroundColor: backgroundColor,
+        backgroundColor: bgColor,
         drawer: drawer,
       );
     }
@@ -95,7 +116,7 @@ class AdaptiveAppBar extends StatelessWidget implements PreferredSizeWidget {
   final Widget? cupertinoTrailing;
 
   const AdaptiveAppBar({
-    Key? key,
+    super.key,
     required this.title,
     this.titleStyle,
     this.actions = const [],
@@ -103,7 +124,7 @@ class AdaptiveAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.onLeadingPressed,
     this.backgroundColor,
     this.cupertinoTrailing,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -161,7 +182,7 @@ class AdaptiveButton extends StatelessWidget {
   final double? width;
 
   const AdaptiveButton({
-    Key? key,
+    super.key,
     required this.label,
     required this.onPressed,
     this.isPrimary = true,
@@ -169,7 +190,7 @@ class AdaptiveButton extends StatelessWidget {
     this.isLoading = false,
     this.icon,
     this.width,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -244,7 +265,7 @@ class AdaptiveTextField extends StatefulWidget {
   final bool obscureText;
 
   const AdaptiveTextField({
-    Key? key,
+    super.key,
     required this.label,
     this.hint,
     this.controller,
@@ -258,7 +279,7 @@ class AdaptiveTextField extends StatefulWidget {
     this.maxLines = 1,
     this.minLines = 1,
     this.obscureText = false,
-  }) : super(key: key);
+  });
 
   @override
   State<AdaptiveTextField> createState() => _AdaptiveTextFieldState();
@@ -350,14 +371,14 @@ class AdaptiveAlertDialog extends StatelessWidget {
   final VoidCallback? onConfirm;
 
   const AdaptiveAlertDialog({
-    Key? key,
+    super.key,
     required this.title,
     required this.content,
     this.cancelText = '取消',
     this.confirmText = '确认',
     this.onCancel,
     this.onConfirm,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -1,284 +1,324 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../../routes/app_pages.dart';
-import '../controllers/settings_controller.dart';
-import '../../../theme/app_theme.dart';
-import '../../../widgets/adaptive/adaptive_scaffold.dart';
 
+import '../../../routes/app_pages.dart';
+import '../../../theme/app_colors.dart';
+import '../../../theme/app_spacing.dart';
+import '../../../widgets/adaptive/adaptive_scaffold.dart';
+import '../../../widgets/adaptive/responsive_layout.dart';
+import '../controllers/settings_controller.dart';
+
+/// 现代化应用设置视图（移动端 & 桌面端通用，移除 ScreenUtil 强依赖）
+/// 遵循 UI/UX Pro Max 规范：优雅分组卡片式设计、精细化色彩指示与多端适配
 class SettingsView extends GetView<SettingsController> {
-  const SettingsView({Key? key}) : super(key: key);
+  const SettingsView({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return AdaptiveScaffold(
-      appBar: _buildAppBar(),
-      cupertinoNavBar: _buildCupertinoNavBar(),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildSectionTitle('外观设置'),
-                SizedBox(height: 8.h),
-                _buildThemeSettings(),
-                SizedBox(height: 8.h),
-                _buildLanguageSettings(),
-                SizedBox(height: 16.h),
-                _buildSectionTitle('下载设置'),
-                SizedBox(height: 8.h),
-                _buildDownloadPathSettings(),
-                SizedBox(height: 8.h),
-                _buildWifiOnlySettings(),
-                SizedBox(height: 8.h),
-                _buildAutoDownloadSettings(),
-                SizedBox(height: 8.h),
-                _buildNotificationSettings(),
-                SizedBox(height: 16.h),
-                _buildSectionTitle('视频设置'),
-                SizedBox(height: 8.h),
-                _buildVideoQualitySettings(),
-                SizedBox(height: 8.h),
-                _buildVideoFormatSettings(),
-                SizedBox(height: 8.h),
-                _buildVideoConvertSettings(),
-                SizedBox(height: 16.h),
-                _buildSectionTitle('存储'),
-                SizedBox(height: 8.h),
-                _buildCacheSettings(),
-                SizedBox(height: 16.h),
-                _buildSectionTitle('关于'),
-                SizedBox(height: 8.h),
-                _buildAboutSettings(),
-                SizedBox(height: 32.h),
-              ],
-            ),
+      appBar: AppBar(
+        title: Text(
+          '应用设置',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
           ),
         ),
+        centerTitle: true,
       ),
-    );
-  }
+      cupertinoNavBar: const CupertinoNavigationBar(
+        middle: Text('应用设置'),
+      ),
+      body: SafeArea(
+        top: false,
+        child: ResponsiveBuilder(
+          builder: (context, screenType) {
+            final isCompact = screenType == AppScreenType.compact;
+            return SingleChildScrollView(
+              padding: EdgeInsets.symmetric(
+                horizontal: isCompact
+                    ? AppSpacing.pagePaddingHorizontal
+                    : AppSpacing.desktopContentPadding,
+                vertical: AppSpacing.lg,
+              ),
+              child: Center(
+                child: ResponsiveContainer(
+                  maxWidth: 800,
+                  padding: EdgeInsets.zero,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 1. 外观与个性化
+                      _buildSectionHeader(context, '界面与语言', Icons.palette_outlined),
+                      _buildGroupContainer(
+                        context,
+                        children: [
+                          _buildThemeTile(context),
+                          _buildDivider(context),
+                          _buildLanguageTile(context),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
 
-  CupertinoNavigationBar _buildCupertinoNavBar() {
-    return const CupertinoNavigationBar(
-      middle: Text('设置'),
-    );
-  }
+                      // 2. 下载与网络
+                      _buildSectionHeader(context, '下载与网络传输', Icons.cloud_download_outlined),
+                      _buildGroupContainer(
+                        context,
+                        children: [
+                          _buildDownloadPathTile(context),
+                          _buildDivider(context),
+                          _buildWifiOnlyTile(context),
+                          _buildDivider(context),
+                          _buildAutoDownloadTile(context),
+                          _buildDivider(context),
+                          _buildNotificationTile(context),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
 
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      title: Text(
-        '设置',
-        style: TextStyle(
-          fontSize: 18.sp,
-          fontWeight: FontWeight.bold,
+                      // 3. 视频与格式处理
+                      _buildSectionHeader(context, '媒体与处理策略', Icons.video_settings_outlined),
+                      _buildGroupContainer(
+                        context,
+                        children: [
+                          _buildVideoQualityTile(context),
+                          _buildDivider(context),
+                          _buildVideoFormatTile(context),
+                          _buildDivider(context),
+                          _buildVideoConvertTile(context),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+
+                      // 4. 存储与系统缓存
+                      _buildSectionHeader(context, '存储与空间释放', Icons.storage_outlined),
+                      _buildGroupContainer(
+                        context,
+                        children: [
+                          _buildCacheTile(context),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+
+                      // 5. 关于与法律条款
+                      _buildSectionHeader(context, '关于与条款', Icons.info_outline_rounded),
+                      _buildGroupContainer(
+                        context,
+                        children: [
+                          _buildAboutTile(context),
+                          _buildDivider(context),
+                          _buildPrivacyTile(context),
+                          _buildDivider(context),
+                          _buildTermsTile(context),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.xxl),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ),
-      centerTitle: true,
-      elevation: 0,
     );
   }
 
-  // 构建分区标题
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: TextStyle(
-        fontSize: 16.sp,
-        fontWeight: FontWeight.bold,
-        foreground: Paint()
-          ..shader = LinearGradient(
-            colors: [
-              AppTheme.primaryColor,
-              AppTheme.accentColor,
-            ],
-          ).createShader(Rect.fromLTWH(0, 0, 100.w, 24.h)),
+  // ==================== 容器与头部布局 ====================
+
+  Widget _buildSectionHeader(BuildContext context, String title, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: AppSpacing.xs + 2),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: AppColors.primary),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            title,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.3,
+                ),
+          ),
+        ],
       ),
     );
   }
 
-  // 构建设置项
-  Widget _buildSettingItem({
-    required String title,
-    required Widget trailing,
-    String? subtitle,
-    VoidCallback? onTap,
-    Widget? leading,
-  }) {
-    return Card(
-      elevation: 0,
-      margin: EdgeInsets.only(bottom: 8.h),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12.r),
-        side: BorderSide(
-          color: Get.theme.colorScheme.onSurface.withOpacity(0.1),
+  Widget _buildGroupContainer(BuildContext context, {required List<Widget> children}) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        border: Border.all(
+          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
           width: 1,
         ),
+        boxShadow: AppSpacing.shadowSm,
       ),
-      child: ListTile(
-        contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
-        leading: leading,
-        title: Text(
-          title,
-          style: TextStyle(
-            fontSize: 14.sp,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        subtitle: subtitle != null
-            ? Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 12.sp,
-                  color: Get.theme.colorScheme.onSurface.withOpacity(0.6),
-                ),
-              )
-            : null,
-        trailing: trailing,
-        onTap: onTap,
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: children,
       ),
     );
   }
 
-  // 主题设置
-  Widget _buildThemeSettings() {
+  Widget _buildDivider(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Divider(
+      height: 1,
+      thickness: 1,
+      indent: 54,
+      endIndent: 16,
+      color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+    );
+  }
+
+  Widget _buildIconBadge({required IconData icon, required Color color}) {
+    return Container(
+      width: 32,
+      height: 32,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+      ),
+      child: Icon(icon, color: color, size: 18),
+    );
+  }
+
+  // ==================== 1. 外观设置项 ====================
+
+  Widget _buildThemeTile(BuildContext context) {
     return Obx(() {
-      return _buildSettingItem(
-        title: '深色模式',
-        subtitle: '切换应用的主题',
-        leading: Icon(
-          controller.isDarkMode.value ? Icons.dark_mode : Icons.light_mode,
-          color: controller.isDarkMode.value
-              ? AppTheme.accentColor
-              : AppTheme.primaryColor,
+      final isDark = controller.isDarkMode.value;
+      return ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 2),
+        leading: _buildIconBadge(
+          icon: isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+          color: isDark ? const Color(0xFF8B5CF6) : const Color(0xFFF59E0B),
         ),
-        trailing: Switch(
-          value: controller.isDarkMode.value,
-          onChanged: (value) => controller.toggleTheme(),
-          activeColor: AppTheme.primaryColor,
+        title: const Text('深色模式', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+        subtitle: Text(
+          isDark ? '已启用深色外观' : '已启用浅色外观',
+          style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+        ),
+        trailing: Switch.adaptive(
+          value: isDark,
+          activeTrackColor: AppColors.primary,
+          onChanged: (_) => controller.toggleTheme(),
         ),
         onTap: () => controller.toggleTheme(),
       );
     });
   }
 
-  // 语言设置
-  Widget _buildLanguageSettings() {
+  Widget _buildLanguageTile(BuildContext context) {
     return Obx(() {
       String languageName = '简体中文';
       switch (controller.currentLanguage.value) {
         case 'zh_CN':
+        case 'zh':
           languageName = '简体中文';
           break;
         case 'en_US':
+        case 'en':
           languageName = 'English';
           break;
         case 'ja_JP':
+        case 'ja':
           languageName = '日本語';
           break;
         case 'ko_KR':
+        case 'ko':
           languageName = '한국어';
           break;
       }
 
-      return _buildSettingItem(
-        title: '语言',
-        subtitle: languageName,
-        leading: Icon(
-          Icons.language,
-          color: AppTheme.primaryColor,
+      return ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 2),
+        leading: _buildIconBadge(
+          icon: Icons.language_rounded,
+          color: const Color(0xFF3B82F6),
         ),
-        trailing: Icon(
-          Icons.arrow_forward_ios,
-          size: 16.sp,
-          color: Get.theme.colorScheme.onSurface.withOpacity(0.6),
+        title: const Text('显示语言', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+        subtitle: Text(
+          languageName,
+          style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
         ),
-        onTap: () => _showLanguageSelector(),
+        trailing: Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.textSecondary),
+        onTap: () => _showLanguageSelector(context),
       );
     });
   }
 
-  // 显示语言选择器
-  void _showLanguageSelector() {
+  void _showLanguageSelector(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     Get.bottomSheet(
       Container(
-        padding: EdgeInsets.all(16.w),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
-          color: Get.theme.colorScheme.surface,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(16.r),
-            topRight: Radius.circular(16.r),
+          color: colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(AppSpacing.radiusXl),
           ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '选择语言',
-              style: TextStyle(
-                fontSize: 18.sp,
-                fontWeight: FontWeight.bold,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '选择显示语言',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded, size: 20),
+                  onPressed: () => Get.back(),
+                ),
+              ],
             ),
-            SizedBox(height: 16.h),
+            const SizedBox(height: AppSpacing.sm),
             _buildLanguageOption('简体中文', 'zh', 'CN'),
             _buildLanguageOption('English', 'en', 'US'),
             _buildLanguageOption('日本語', 'ja', 'JP'),
             _buildLanguageOption('한국어', 'ko', 'KR'),
-            SizedBox(height: 16.h),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Get.back(),
-                style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(vertical: 12.h),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  backgroundColor: AppTheme.primaryColor,
-                ),
-                child: Text(
-                  '关闭',
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
+            const SizedBox(height: AppSpacing.md),
           ],
         ),
       ),
+      isScrollControlled: true,
     );
   }
 
-  // 构建语言选项
-  Widget _buildLanguageOption(
-      String name, String languageCode, String countryCode) {
+  Widget _buildLanguageOption(String name, String languageCode, String countryCode) {
     return Obx(() {
-      final isSelected =
-          controller.currentLanguage.value == '${languageCode}_$countryCode';
+      final isSelected = controller.currentLanguage.value == '${languageCode}_$countryCode' ||
+          controller.currentLanguage.value == languageCode;
 
       return ListTile(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusSm)),
         title: Text(
           name,
           style: TextStyle(
-            fontSize: 16.sp,
+            fontSize: 14,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            color: isSelected
-                ? AppTheme.primaryColor
-                : Get.theme.colorScheme.onSurface,
+            color: isSelected ? AppColors.primary : null,
           ),
         ),
         trailing: isSelected
-            ? Icon(
-                Icons.check_circle,
-                color: AppTheme.primaryColor,
-              )
+            ? const Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 20)
             : null,
         onTap: () {
           controller.setLanguage(languageCode, countryCode);
@@ -288,185 +328,180 @@ class SettingsView extends GetView<SettingsController> {
     });
   }
 
-  // 下载路径设置
-  Widget _buildDownloadPathSettings() {
+  // ==================== 2. 下载与网络设置项 ====================
+
+  Widget _buildDownloadPathTile(BuildContext context) {
     return Obx(() {
-      return _buildSettingItem(
-        title: '下载路径',
-        subtitle: controller.downloadPath.value.isEmpty
-            ? '默认路径'
-            : controller.downloadPath.value,
-        leading: Icon(
-          Icons.folder,
-          color: AppTheme.primaryColor,
+      return ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 2),
+        leading: _buildIconBadge(
+          icon: Icons.folder_open_rounded,
+          color: const Color(0xFFF59E0B),
         ),
-        trailing: Icon(
-          Icons.arrow_forward_ios,
-          size: 16.sp,
-          color: Get.theme.colorScheme.onSurface.withOpacity(0.6),
+        title: const Text('默认下载路径', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+        subtitle: Text(
+          controller.downloadPath.value.isEmpty ? '系统默认下载目录' : controller.downloadPath.value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
         ),
+        trailing: Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.textSecondary),
         onTap: () => controller.selectDownloadPath(),
       );
     });
   }
 
-  // 仅WiFi下载设置
-  Widget _buildWifiOnlySettings() {
+  Widget _buildWifiOnlyTile(BuildContext context) {
     return Obx(() {
-      return _buildSettingItem(
-        title: '仅在WiFi下下载',
-        subtitle: '开启后仅在WiFi环境下下载视频',
-        leading: Icon(
-          Icons.wifi,
-          color: AppTheme.primaryColor,
+      return ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 2),
+        leading: _buildIconBadge(
+          icon: Icons.wifi_rounded,
+          color: const Color(0xFF0EA5E9),
         ),
-        trailing: Switch(
+        title: const Text('仅在 Wi-Fi 下下载', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+        subtitle: Text(
+          '避免在蜂窝移动网络下消耗过多流量',
+          style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+        ),
+        trailing: Switch.adaptive(
           value: controller.wifiOnly.value,
-          onChanged: (value) => controller.setWifiOnly(value),
-          activeColor: AppTheme.primaryColor,
+          activeTrackColor: AppColors.primary,
+          onChanged: (val) => controller.setWifiOnly(val),
         ),
         onTap: () => controller.setWifiOnly(!controller.wifiOnly.value),
       );
     });
   }
 
-  // 自动下载设置
-  Widget _buildAutoDownloadSettings() {
+  Widget _buildAutoDownloadTile(BuildContext context) {
     return Obx(() {
-      return _buildSettingItem(
-        title: '自动下载',
-        subtitle: '解析视频后自动开始下载',
-        leading: Icon(
-          Icons.download,
-          color: AppTheme.primaryColor,
+      return ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 2),
+        leading: _buildIconBadge(
+          icon: Icons.bolt_rounded,
+          color: const Color(0xFF10B981),
         ),
-        trailing: Switch(
+        title: const Text('解析后自动下载', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+        subtitle: Text(
+          '解析视频成功后直接开始下载任务',
+          style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+        ),
+        trailing: Switch.adaptive(
           value: controller.autoDownload.value,
-          onChanged: (value) => controller.setAutoDownload(value),
-          activeColor: AppTheme.primaryColor,
+          activeTrackColor: AppColors.primary,
+          onChanged: (val) => controller.setAutoDownload(val),
         ),
         onTap: () => controller.setAutoDownload(!controller.autoDownload.value),
       );
     });
   }
 
-  // 通知设置
-  Widget _buildNotificationSettings() {
+  Widget _buildNotificationTile(BuildContext context) {
     return Obx(() {
-      return _buildSettingItem(
-        title: '下载通知',
-        subtitle: '显示下载进度通知',
-        leading: Icon(
-          Icons.notifications,
-          color: AppTheme.primaryColor,
+      return ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 2),
+        leading: _buildIconBadge(
+          icon: Icons.notifications_active_outlined,
+          color: const Color(0xFF6366F1),
         ),
-        trailing: Switch(
+        title: const Text('下载完成通知', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+        subtitle: Text(
+          '在系统通知栏实时显示任务完成提醒',
+          style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+        ),
+        trailing: Switch.adaptive(
           value: controller.showNotification.value,
-          onChanged: (value) => controller.setShowNotification(value),
-          activeColor: AppTheme.primaryColor,
+          activeTrackColor: AppColors.primary,
+          onChanged: (val) => controller.setShowNotification(val),
         ),
-        onTap: () =>
-            controller.setShowNotification(!controller.showNotification.value),
+        onTap: () => controller.setShowNotification(!controller.showNotification.value),
       );
     });
   }
 
-  // 视频质量设置
-  Widget _buildVideoQualitySettings() {
+  // ==================== 3. 视频与格式设置项 ====================
+
+  Widget _buildVideoQualityTile(BuildContext context) {
     return Obx(() {
-      return _buildSettingItem(
-        title: '默认视频质量',
-        subtitle: '${controller.defaultVideoQuality.value}P',
-        leading: Icon(
-          Icons.high_quality,
-          color: AppTheme.primaryColor,
+      return ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 2),
+        leading: _buildIconBadge(
+          icon: Icons.high_quality_rounded,
+          color: const Color(0xFFEC4899),
         ),
-        trailing: Icon(
-          Icons.arrow_forward_ios,
-          size: 16.sp,
-          color: Get.theme.colorScheme.onSurface.withOpacity(0.6),
+        title: const Text('默认视频清晰度', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+        subtitle: Text(
+          '${controller.defaultVideoQuality.value}P',
+          style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
         ),
-        onTap: () => _showQualitySelector(),
+        trailing: Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.textSecondary),
+        onTap: () => _showQualitySelector(context),
       );
     });
   }
 
-  // 显示质量选择器
-  void _showQualitySelector() {
+  void _showQualitySelector(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     Get.bottomSheet(
       Container(
-        padding: EdgeInsets.all(16.w),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
-          color: Get.theme.colorScheme.surface,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(16.r),
-            topRight: Radius.circular(16.r),
+          color: colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(AppSpacing.radiusXl),
           ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '选择默认视频质量',
-              style: TextStyle(
-                fontSize: 18.sp,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 16.h),
-            _buildQualityOption(1080),
-            _buildQualityOption(720),
-            _buildQualityOption(480),
-            _buildQualityOption(360),
-            SizedBox(height: 16.h),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Get.back(),
-                style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(vertical: 12.h),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  backgroundColor: AppTheme.primaryColor,
-                ),
-                child: Text(
-                  '关闭',
-                  style: TextStyle(
-                    fontSize: 16.sp,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '选择默认视频清晰度',
+                  style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
                   ),
                 ),
-              ),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded, size: 20),
+                  onPressed: () => Get.back(),
+                ),
+              ],
             ),
+            const SizedBox(height: AppSpacing.sm),
+            _buildQualityOption(1080, '1080P 超清 (推荐)'),
+            _buildQualityOption(720, '720P 高清'),
+            _buildQualityOption(480, '480P 标清'),
+            _buildQualityOption(360, '360P 流畅'),
+            const SizedBox(height: AppSpacing.md),
           ],
         ),
       ),
+      isScrollControlled: true,
     );
   }
 
-  // 构建质量选项
-  Widget _buildQualityOption(int quality) {
+  Widget _buildQualityOption(int quality, String label) {
     return Obx(() {
       final isSelected = controller.defaultVideoQuality.value == quality;
 
       return ListTile(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusSm)),
         title: Text(
-          '${quality}P',
+          label,
           style: TextStyle(
-            fontSize: 16.sp,
+            fontSize: 14,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            color: isSelected
-                ? AppTheme.primaryColor
-                : Get.theme.colorScheme.onSurface,
+            color: isSelected ? AppColors.primary : null,
           ),
         ),
         trailing: isSelected
-            ? Icon(
-                Icons.check_circle,
-                color: AppTheme.primaryColor,
-              )
+            ? const Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 20)
             : null,
         onTap: () {
           controller.setDefaultVideoQuality(quality);
@@ -476,119 +511,85 @@ class SettingsView extends GetView<SettingsController> {
     });
   }
 
-  // 视频格式设置
-  Widget _buildVideoFormatSettings() {
+  Widget _buildVideoFormatTile(BuildContext context) {
     return Obx(() {
-      return _buildSettingItem(
-        title: '默认视频格式',
-        subtitle: controller.defaultVideoFormat.value.toUpperCase(),
-        leading: Icon(
-          Icons.video_file,
-          color: AppTheme.primaryColor,
+      return ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 2),
+        leading: _buildIconBadge(
+          icon: Icons.movie_filter_rounded,
+          color: const Color(0xFF06B6D4),
         ),
-        trailing: Icon(
-          Icons.arrow_forward_ios,
-          size: 16.sp,
-          color: Get.theme.colorScheme.onSurface.withOpacity(0.6),
+        title: const Text('默认存储格式', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+        subtitle: Text(
+          controller.defaultVideoFormat.value.toUpperCase(),
+          style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
         ),
-        onTap: () => _showFormatSelector(),
+        trailing: Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.textSecondary),
+        onTap: () => _showFormatSelector(context),
       );
     });
   }
 
-  // 显示格式选择器
-  void _showFormatSelector() {
+  void _showFormatSelector(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     Get.bottomSheet(
       Container(
-        padding: EdgeInsets.all(16.w),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
-          color: Get.theme.colorScheme.surface,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(16.r),
-            topRight: Radius.circular(16.r),
+          color: colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(AppSpacing.radiusXl),
           ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '选择默认视频格式',
-              style: TextStyle(
-                fontSize: 18.sp,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 16.h),
-            _buildFormatOption('mp4'),
-            _buildFormatOption('mkv'),
-            _buildFormatOption('mp3'),
-            SizedBox(height: 16.h),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Get.back(),
-                style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(vertical: 12.h),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  backgroundColor: AppTheme.primaryColor,
-                ),
-                child: Text(
-                  '关闭',
-                  style: TextStyle(
-                    fontSize: 16.sp,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '选择默认视频格式',
+                  style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
                   ),
                 ),
-              ),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded, size: 20),
+                  onPressed: () => Get.back(),
+                ),
+              ],
             ),
+            const SizedBox(height: AppSpacing.sm),
+            _buildFormatOption('mp4', 'MP4 (最兼容)'),
+            _buildFormatOption('mkv', 'MKV (多音轨/字幕支持)'),
+            _buildFormatOption('mp3', 'MP3 (仅音频提取)'),
+            const SizedBox(height: AppSpacing.md),
           ],
         ),
       ),
+      isScrollControlled: true,
     );
   }
 
-  // 视频转换设置
-  Widget _buildVideoConvertSettings() {
-    return _buildSettingItem(
-      title: '视频格式转换',
-      subtitle: '转换视频格式、分辨率等',
-      leading: Icon(
-        Icons.transform,
-        color: Colors.deepPurple,
-      ),
-      trailing: Icon(
-        Icons.arrow_forward_ios,
-        size: 16.sp,
-        color: Get.theme.colorScheme.onSurface.withOpacity(0.6),
-      ),
-      onTap: () => Get.toNamed(Routes.CONVERT),
-    );
-  }
-
-  // 构建格式选项
-  Widget _buildFormatOption(String format) {
+  Widget _buildFormatOption(String format, String label) {
     return Obx(() {
       final isSelected = controller.defaultVideoFormat.value == format;
 
       return ListTile(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusSm)),
         title: Text(
-          format.toUpperCase(),
+          label,
           style: TextStyle(
-            fontSize: 16.sp,
+            fontSize: 14,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            color: isSelected
-                ? AppTheme.primaryColor
-                : Get.theme.colorScheme.onSurface,
+            color: isSelected ? AppColors.primary : null,
           ),
         ),
         trailing: isSelected
-            ? Icon(
-                Icons.check_circle,
-                color: AppTheme.primaryColor,
-              )
+            ? const Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 20)
             : null,
         onTap: () {
           controller.setDefaultVideoFormat(format);
@@ -598,36 +599,57 @@ class SettingsView extends GetView<SettingsController> {
     });
   }
 
-  // 缓存设置
-  Widget _buildCacheSettings() {
+  Widget _buildVideoConvertTile(BuildContext context) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 2),
+      leading: _buildIconBadge(
+        icon: Icons.transform_rounded,
+        color: const Color(0xFF8B5CF6),
+      ),
+      title: const Text('视频格式转换工具', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+      subtitle: Text(
+        '快速调用本地转码工具，支持视频/音频转换与重封装',
+        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+      ),
+      trailing: Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.textSecondary),
+      onTap: () => Get.toNamed(Routes.CONVERT),
+    );
+  }
+
+  // ==================== 4. 存储与缓存设置项 ====================
+
+  Widget _buildCacheTile(BuildContext context) {
     return Obx(() {
-      return _buildSettingItem(
-        title: '清除缓存',
-        subtitle: '当前缓存大小: ${controller.cacheSize.value}',
-        leading: Icon(
-          Icons.cleaning_services,
-          color: AppTheme.primaryColor,
+      return ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 2),
+        leading: _buildIconBadge(
+          icon: Icons.cleaning_services_rounded,
+          color: const Color(0xFFF97316),
         ),
-        trailing: Icon(
-          Icons.arrow_forward_ios,
-          size: 16.sp,
-          color: Get.theme.colorScheme.onSurface.withOpacity(0.6),
+        title: const Text('清除临时缓存', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+        subtitle: Text(
+          '当前已占用缓存: ${controller.cacheSize.value}',
+          style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
         ),
-        onTap: () => _showClearCacheConfirmation(),
+        trailing: Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.textSecondary),
+        onTap: () => _showClearCacheConfirmation(context),
       );
     });
   }
 
-  // 显示清除缓存确认对话框
-  void _showClearCacheConfirmation() {
+  void _showClearCacheConfirmation(BuildContext context) {
     Get.dialog(
       AlertDialog(
-        title: Text('清除缓存'),
-        content: Text('确定要清除所有缓存吗？'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusLg)),
+        title: const Text('确认清除缓存', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        content: const Text(
+          '清除缓存将释放网络临时文件与解析快照，不会删除您已下载的本地视频文件。',
+          style: TextStyle(fontSize: 13),
+        ),
         actions: [
           TextButton(
             onPressed: () => Get.back(),
-            child: Text('取消'),
+            child: const Text('取消'),
           ),
           ElevatedButton(
             onPressed: () {
@@ -635,59 +657,58 @@ class SettingsView extends GetView<SettingsController> {
               controller.clearCache();
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryColor,
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
             ),
-            child: Text('确定'),
+            child: const Text('确定清除'),
           ),
         ],
       ),
     );
   }
 
-  // 关于设置
-  Widget _buildAboutSettings() {
-    return Column(
-      children: [
-        _buildSettingItem(
-          title: '关于 TubeSavely',
-          leading: Icon(
-            Icons.info,
-            color: AppTheme.primaryColor,
-          ),
-          trailing: Icon(
-            Icons.arrow_forward_ios,
-            size: 16.sp,
-            color: Get.theme.colorScheme.onSurface.withOpacity(0.6),
-          ),
-          onTap: () => controller.showAboutApp(),
-        ),
-        _buildSettingItem(
-          title: '隐私政策',
-          leading: Icon(
-            Icons.privacy_tip,
-            color: AppTheme.primaryColor,
-          ),
-          trailing: Icon(
-            Icons.arrow_forward_ios,
-            size: 16.sp,
-            color: Get.theme.colorScheme.onSurface.withOpacity(0.6),
-          ),
-          onTap: () => controller.showPrivacyPolicy(),
-        ),
-        _buildSettingItem(
-          title: '用户协议',
-          leading: Icon(
-            Icons.description,
-            color: AppTheme.primaryColor,
-          ),
-          trailing: Icon(
-            Icons.arrow_forward_ios,
-            size: 16.sp,
-            color: Get.theme.colorScheme.onSurface.withOpacity(0.6),
-          ),
-          onTap: () => controller.showTermsOfService(),
-        ),
-      ],
+  // ==================== 5. 关于与条款 ====================
+
+  Widget _buildAboutTile(BuildContext context) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 2),
+      leading: _buildIconBadge(
+        icon: Icons.info_outline_rounded,
+        color: const Color(0xFF64748B),
+      ),
+      title: const Text('关于 TubeSavely', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+      subtitle: Text(
+        '版本信息与开发者说明',
+        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+      ),
+      trailing: Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.textSecondary),
+      onTap: () => controller.showAboutApp(),
+    );
+  }
+
+  Widget _buildPrivacyTile(BuildContext context) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 2),
+      leading: _buildIconBadge(
+        icon: Icons.privacy_tip_outlined,
+        color: const Color(0xFF64748B),
+      ),
+      title: const Text('隐私保护政策', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+      trailing: Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.textSecondary),
+      onTap: () => controller.showPrivacyPolicy(),
+    );
+  }
+
+  Widget _buildTermsTile(BuildContext context) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 2),
+      leading: _buildIconBadge(
+        icon: Icons.description_outlined,
+        color: const Color(0xFF64748B),
+      ),
+      title: const Text('用户使用协议', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+      trailing: Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.textSecondary),
+      onTap: () => controller.showTermsOfService(),
     );
   }
 }

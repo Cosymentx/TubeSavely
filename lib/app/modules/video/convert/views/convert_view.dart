@@ -1,28 +1,37 @@
-// import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:get/get.dart';
-import 'package:tubesavely/app/modules/video/convert/controllers/convert_controller.dart';
-import 'package:tubesavely/app/services/video_converter_service.dart';
-import 'package:tubesavely/app/theme/app_colors.dart';
-import 'package:tubesavely/app/theme/app_text_styles.dart';
-
+import 'dart:io';
 import 'package:flutter/cupertino.dart';
-import 'package:tubesavely/app/widgets/adaptive/adaptive_scaffold.dart';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
+import '../../../../services/video_converter_service.dart';
+import '../../../../theme/app_colors.dart';
+import '../../../../theme/app_spacing.dart';
+import '../../../../theme/app_text_styles.dart';
+import '../../../../widgets/adaptive/adaptive_scaffold.dart';
+import '../../../../widgets/adaptive/responsive_layout.dart';
+import '../controllers/convert_controller.dart';
+
+/// 现代化响应式视频格式转换视图（移动端 & 桌面端通用，移除 ScreenUtil 强依赖）
 class ConvertView extends GetView<ConvertController> {
-  const ConvertView({Key? key}) : super(key: key);
+  const ConvertView({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return AdaptiveScaffold(
       appBar: AppBar(
-        title: Text('视频格式转换', style: AppTextStyles.titleLarge),
+        title: Text(
+          '视频格式转换',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.folder_open),
+            icon: const Icon(Icons.folder_open_rounded),
             onPressed: controller.openOutputFolder,
-            tooltip: '打开输出文件夹',
+            tooltip: '打开输出目录',
           ),
         ],
       ),
@@ -35,437 +44,593 @@ class ConvertView extends GetView<ConvertController> {
         ),
       ),
       body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(16.w),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildFormatSelector(),
-              SizedBox(height: 16.h),
-              _buildResolutionSelector(),
-              SizedBox(height: 16.h),
-              _buildFileSelector(),
-              SizedBox(height: 16.h),
-              _buildTaskList(),
-            ],
-          ),
+        top: false,
+        child: ResponsiveBuilder(
+          builder: (context, screenType) {
+            final isCompact = screenType == AppScreenType.compact;
+            return ResponsiveContainer(
+              maxWidth: 1100,
+              padding: EdgeInsets.symmetric(
+                horizontal: isCompact
+                    ? AppSpacing.pagePaddingHorizontal
+                    : AppSpacing.desktopContentPadding,
+                vertical: AppSpacing.md,
+              ),
+              child: isCompact
+                  ? _buildMobileLayout(context)
+                  : _buildDesktopLayout(context),
+            );
+          },
         ),
       ),
-      floatingActionButton: _buildFloatingActionButton(),
+      floatingActionButton: _buildFloatingActionButton(context),
     );
   }
 
-  // 格式选择器
-  Widget _buildFormatSelector() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('输出格式', style: AppTextStyles.titleMedium),
-        SizedBox(height: 8.h),
-        Obx(() {
-          return Wrap(
-            spacing: 8.w,
-            runSpacing: 8.h,
-            children: controller.availableFormats.map((format) {
-              final isSelected = controller.selectedFormat.value == format;
-              return ChoiceChip(
-                label: Text(format.toUpperCase()),
-                selected: isSelected,
-                onSelected: (selected) {
-                  if (selected) controller.setFormat(format);
-                },
-                backgroundColor: AppColors.background,
-                selectedColor: AppColors.primary,
-                labelStyle: TextStyle(
-                  color: isSelected ? Colors.white : AppColors.textPrimary,
-                ),
-              );
-            }).toList(),
-          );
-        }),
-      ],
+  // ==================== 移动端流式布局 ====================
+  Widget _buildMobileLayout(BuildContext context) {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSettingsCard(context),
+          const SizedBox(height: AppSpacing.lg),
+          _buildFileSelectorCard(context),
+          const SizedBox(height: AppSpacing.lg),
+          _buildTaskListSection(context),
+          const SizedBox(height: AppSpacing.xxl),
+        ],
+      ),
     );
   }
 
-  // 分辨率选择器
-  Widget _buildResolutionSelector() {
-    return Column(
+  // ==================== 桌面端双列布局 ====================
+  Widget _buildDesktopLayout(BuildContext context) {
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('输出分辨率', style: AppTextStyles.titleMedium),
-        SizedBox(height: 8.h),
-        Obx(() {
-          return Wrap(
-            spacing: 8.w,
-            runSpacing: 8.h,
-            children: controller.availableResolutions.map((resolution) {
-              final isSelected =
-                  controller.selectedResolution.value == resolution;
-              return ChoiceChip(
-                label: Text(resolution),
-                selected: isSelected,
-                onSelected: (selected) {
-                  if (selected) controller.setResolution(resolution);
-                },
-                backgroundColor: AppColors.background,
-                selectedColor: AppColors.primary,
-                labelStyle: TextStyle(
-                  color: isSelected ? Colors.white : AppColors.textPrimary,
-                ),
-              );
-            }).toList(),
-          );
-        }),
-      ],
-    );
-  }
-
-  // 文件选择器
-  Widget _buildFileSelector() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text('选择视频文件', style: AppTextStyles.titleMedium),
-            TextButton.icon(
-              onPressed: controller.pickVideoFiles,
-              icon: const Icon(Icons.add),
-              label: const Text('添加文件'),
+        // 左列：转码预设与待处理文件列表 (40%)
+        Expanded(
+          flex: 4,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildSettingsCard(context),
+                const SizedBox(height: AppSpacing.lg),
+                _buildFileSelectorCard(context),
+              ],
             ),
-          ],
+          ),
         ),
-        SizedBox(height: 8.h),
-        Obx(() {
-          if (controller.selectedFiles.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 24.h),
+        const SizedBox(width: AppSpacing.xl),
+
+        // 右列：实时任务队列与进度监视 (60%)
+        Expanded(
+          flex: 6,
+          child: _buildTaskListSection(context),
+        ),
+      ],
+    );
+  }
+
+  // ==================== 1. 转换参数设置卡片 ====================
+  Widget _buildSettingsCard(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        border: Border.all(
+          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+          width: 1,
+        ),
+        boxShadow: AppSpacing.shadowSm,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                ),
+                child: const Icon(
+                  Icons.tune_rounded,
+                  color: AppColors.primary,
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                '转码输出预设',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+
+          // 目标格式胶囊
+          Text(
+            '目标格式',
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Obx(() {
+            return Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.xs,
+              children: controller.availableFormats.map((format) {
+                final isSelected = controller.selectedFormat.value == format;
+                return ChoiceChip(
+                  label: Text(format.toUpperCase()),
+                  selected: isSelected,
+                  selectedColor: AppColors.primaryContainer,
+                  onSelected: (selected) {
+                    if (selected) controller.setFormat(format);
+                  },
+                );
+              }).toList(),
+            );
+          }),
+          const SizedBox(height: AppSpacing.md),
+
+          // 目标分辨率胶囊
+          Text(
+            '目标分辨率',
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Obx(() {
+            return Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.xs,
+              children: controller.availableResolutions.map((resolution) {
+                final isSelected =
+                    controller.selectedResolution.value == resolution;
+                return ChoiceChip(
+                  label: Text(resolution),
+                  selected: isSelected,
+                  selectedColor: AppColors.primaryContainer,
+                  onSelected: (selected) {
+                    if (selected) controller.setResolution(resolution);
+                  },
+                );
+              }).toList(),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  // ==================== 2. 待转换文件选择卡片 ====================
+  Widget _buildFileSelectorCard(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        border: Border.all(
+          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+          width: 1,
+        ),
+        boxShadow: AppSpacing.shadowSm,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '待处理文件',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              TextButton.icon(
+                icon: const Icon(Icons.add_rounded, size: 16),
+                label: const Text('添加视频', style: TextStyle(fontSize: 12)),
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                ),
+                onPressed: controller.pickVideoFiles,
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+
+          Obx(() {
+            if (controller.selectedFiles.isEmpty) {
+              return InkWell(
+                onTap: controller.pickVideoFiles,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 28),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                    border: Border.all(
+                      color: colorScheme.outlineVariant,
+                      style: BorderStyle.solid,
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.video_library_outlined,
+                        size: 36,
+                        color: AppColors.textSecondary,
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(
+                        '点击导入本地视频文件',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '支持 MP4 / MKV / MOV / AVI 等主流格式',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: AppColors.textSecondary,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            return Column(
+              children: [
+                Container(
+                  constraints: const BoxConstraints(maxHeight: 220),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                    border: Border.all(color: colorScheme.outlineVariant),
+                  ),
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: controller.selectedFiles.length,
+                    separatorBuilder: (_, __) => Divider(
+                      height: 1,
+                      color: colorScheme.outlineVariant,
+                    ),
+                    itemBuilder: (context, index) {
+                      final file = controller.selectedFiles[index];
+                      final fileName = file.path.split(Platform.pathSeparator).last;
+
+                      return ListTile(
+                        dense: true,
+                        leading: const Icon(
+                          Icons.movie_outlined,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
+                        title: Text(
+                          fileName,
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        subtitle: Text(
+                          file.path,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textSecondary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.close_rounded, size: 16),
+                          tooltip: '移除',
+                          onPressed: () => controller.removeFile(file),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                SizedBox(
+                  width: double.infinity,
+                  height: 40,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                    label: Text('转换全部 (${controller.selectedFiles.length}个文件)'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                      ),
+                    ),
+                    onPressed: controller.convertAllVideos,
+                  ),
+                ),
+              ],
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  // ==================== 3. 任务队列与进度卡片 ====================
+  Widget _buildTaskListSection(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        border: Border.all(
+          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+          width: 1,
+        ),
+        boxShadow: AppSpacing.shadowSm,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: AppColors.info.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                ),
+                child: const Icon(
+                  Icons.playlist_play_rounded,
+                  color: AppColors.info,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                '转码任务队列',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+
+          Obx(() {
+            if (controller.conversionTasks.isEmpty) {
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 40),
+                alignment: Alignment.center,
                 child: Column(
                   children: [
-                    Icon(Icons.video_file,
-                        size: 48.sp, color: AppColors.textSecondary),
-                    SizedBox(height: 8.h),
-                    Text('暂无选择的视频文件', style: AppTextStyles.bodyMedium),
-                    SizedBox(height: 16.h),
-                    ElevatedButton.icon(
-                      onPressed: controller.pickVideoFiles,
-                      icon: const Icon(Icons.add),
-                      label: const Text('选择视频文件'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
+                    Icon(
+                      Icons.task_alt_rounded,
+                      size: 40,
+                      color: AppColors.textTertiary,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      '暂无正在进行的转换任务',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: controller.conversionTasks.length,
+              separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
+              itemBuilder: (context, index) {
+                final task = controller.conversionTasks[index];
+                return _buildTaskCard(context, task);
+              },
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTaskCard(BuildContext context, ConversionTask task) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    final fileName = task.sourceFilePath.split(Platform.pathSeparator).last;
+    final statusColor = _getStatusColor(task.status);
+    final statusText = _getStatusText(task.status);
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF101724) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        border: Border.all(
+          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      fileName,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '目标: ${task.format.toUpperCase()} • ${task.resolution}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppColors.textSecondary,
+                        fontSize: 11,
                       ),
                     ),
                   ],
                 ),
               ),
-            );
-          }
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+                ),
+                child: Text(
+                  statusText,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
 
-          return Container(
-            height: 120.h,
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.border),
-              borderRadius: BorderRadius.circular(8.r),
+          // 进度条（转码中展示）
+          if (task.status == ConversionStatus.converting ||
+              task.status == ConversionStatus.pending) ...[
+            const SizedBox(height: AppSpacing.sm),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusRound),
+              child: LinearProgressIndicator(
+                value: task.progress,
+                minHeight: 4,
+                backgroundColor: colorScheme.surfaceContainerLow,
+                valueColor: AlwaysStoppedAnimation<Color>(statusColor),
+              ),
             ),
-            child: ListView.builder(
-              itemCount: controller.selectedFiles.length,
-              itemBuilder: (context, index) {
-                final file = controller.selectedFiles[index];
-                return ListTile(
-                  leading: Icon(Icons.video_file, color: AppColors.primary),
-                  title: Text(
-                    file.path.split('/').last,
-                    style: AppTextStyles.bodyMedium,
-                    overflow: TextOverflow.ellipsis,
+            const SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  task.statusMessage ?? (task.status == ConversionStatus.pending ? '排队中...' : '转码加速中...'),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: AppColors.textSecondary,
+                    fontSize: 10,
                   ),
-                  subtitle: Text(
-                    file.path,
-                    style: AppTextStyles.bodySmall,
-                    overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  '${(task.progress * 100).toStringAsFixed(1)}%',
+                  style: AppTextStyles.dataSmall.copyWith(
+                    fontSize: 11,
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
                   ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.transform),
-                        onPressed: () => controller.convertVideo(file),
-                        tooltip: '转换此文件',
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete),
-                        onPressed: () => controller.removeFile(file),
-                        tooltip: '移除此文件',
-                      ),
-                    ],
-                  ),
-                );
-              },
+                ),
+              ],
             ),
-          );
-        }),
-      ],
-    );
-  }
+          ],
 
-  // 任务列表
-  Widget _buildTaskList() {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('转换任务', style: AppTextStyles.titleMedium),
-          SizedBox(height: 8.h),
-          Expanded(
-            child: Obx(() {
-              if (controller.conversionTasks.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.list,
-                          size: 48.sp, color: AppColors.textSecondary),
-                      SizedBox(height: 8.h),
-                      Text('暂无转换任务', style: AppTextStyles.bodyMedium),
-                    ],
+          // 操作按钮组
+          const SizedBox(height: AppSpacing.xs),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              if (task.status == ConversionStatus.completed) ...[
+                TextButton.icon(
+                  icon: const Icon(Icons.play_arrow_rounded, size: 16),
+                  label: const Text('播放', style: TextStyle(fontSize: 12)),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.success,
+                    visualDensity: VisualDensity.compact,
                   ),
-                );
-              }
-
-              return ListView.builder(
-                itemCount: controller.conversionTasks.length,
-                itemBuilder: (context, index) {
-                  final task = controller.conversionTasks[index];
-                  return _buildTaskItem(task);
-                },
-              );
-            }),
+                  onPressed: () => controller.openFile(task.targetFilePath),
+                ),
+                TextButton.icon(
+                  icon: const Icon(Icons.folder_open_rounded, size: 16),
+                  label: const Text('定位', style: TextStyle(fontSize: 12)),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  onPressed: () => controller.openFileLocation(task.targetFilePath),
+                ),
+              ],
+              if (task.status == ConversionStatus.pending ||
+                  task.status == ConversionStatus.converting)
+                TextButton.icon(
+                  icon: const Icon(Icons.cancel_rounded, size: 16),
+                  label: const Text('取消', style: TextStyle(fontSize: 12)),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.error,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  onPressed: () => controller.cancelTask(task.id),
+                ),
+              if (task.status == ConversionStatus.failed)
+                TextButton.icon(
+                  icon: const Icon(Icons.refresh_rounded, size: 16),
+                  label: const Text('重试', style: TextStyle(fontSize: 12)),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  onPressed: () => controller.retryTask(task),
+                ),
+              IconButton(
+                tooltip: '删除',
+                icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                color: AppColors.textSecondary,
+                onPressed: () => controller.deleteTask(task.id),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  // 任务项
-  Widget _buildTaskItem(ConversionTask task) {
-    final fileName = task.sourceFilePath.split('/').last;
-    final statusText = _getStatusText(task.status);
-    final statusColor = _getStatusColor(task.status);
-
-    return Card(
-      margin: EdgeInsets.only(bottom: 8.h),
-      child: Padding(
-        padding: EdgeInsets.all(12.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  task.status == ConversionStatus.failed
-                      ? Icons.error_outline
-                      : (task.status == ConversionStatus.completed
-                          ? Icons.check_circle_outline
-                          : Icons.video_file),
-                  color: task.status == ConversionStatus.failed
-                      ? AppColors.error
-                      : (task.status == ConversionStatus.completed
-                          ? AppColors.success
-                          : AppColors.primary),
-                ),
-                SizedBox(width: 8.w),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        fileName,
-                        style: AppTextStyles.bodyMedium,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        '${task.format.toUpperCase()} • ${task.resolution}',
-                        style: AppTextStyles.bodySmall,
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                  decoration: BoxDecoration(
-                    color: statusColor.withAlpha(25),
-                    borderRadius: BorderRadius.circular(4.r),
-                  ),
-                  child: Text(
-                    statusText,
-                    style: TextStyle(color: statusColor, fontSize: 12.sp),
-                  ),
-                ),
-              ],
-            ),
-            if (task.status == ConversionStatus.converting ||
-                task.status == ConversionStatus.pending)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: EdgeInsets.only(top: 8.h),
-                    child: LinearProgressIndicator(
-                      value: task.progress,
-                      backgroundColor: AppColors.border,
-                      valueColor:
-                          AlwaysStoppedAnimation<Color>(AppColors.primary),
-                    ),
-                  ),
-                  SizedBox(height: 4.h),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        task.statusMessage ??
-                            (task.status == ConversionStatus.pending
-                                ? '等待中...'
-                                : '转换中...'),
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.textSecondary,
-                          fontSize: 10.sp,
-                        ),
-                      ),
-                      Text(
-                        '${(task.progress * 100).toStringAsFixed(1)}%',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 10.sp,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            // 显示错误信息（如果有）
-            if (task.status == ConversionStatus.failed &&
-                task.statusMessage != null)
-              Padding(
-                padding: EdgeInsets.only(top: 8.h),
-                child: Container(
-                  padding: EdgeInsets.all(8.w),
-                  decoration: BoxDecoration(
-                    color: AppColors.error.withAlpha(15),
-                    borderRadius: BorderRadius.circular(4.r),
-                    border: Border.all(color: AppColors.error.withAlpha(50)),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Icons.error_outline,
-                          color: AppColors.error, size: 16.sp),
-                      SizedBox(width: 8.w),
-                      Expanded(
-                        child: Text(
-                          task.statusMessage!,
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.error,
-                            fontSize: 11.sp,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-            SizedBox(height: 8.h),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                if (task.status == ConversionStatus.completed)
-                  TextButton.icon(
-                    onPressed: () => controller.openFile(task.targetFilePath),
-                    icon: const Icon(Icons.play_arrow),
-                    label: const Text('播放'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppColors.success,
-                    ),
-                  ),
-                if (task.status == ConversionStatus.completed)
-                  TextButton.icon(
-                    onPressed: () =>
-                        controller.openFileLocation(task.targetFilePath),
-                    icon: const Icon(Icons.folder_open),
-                    label: const Text('打开位置'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                    ),
-                  ),
-                if (task.status == ConversionStatus.pending ||
-                    task.status == ConversionStatus.converting)
-                  TextButton.icon(
-                    onPressed: () => controller.cancelTask(task.id),
-                    icon: const Icon(Icons.cancel),
-                    label: const Text('取消'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppColors.error,
-                    ),
-                  ),
-                if (task.status == ConversionStatus.failed)
-                  TextButton.icon(
-                    onPressed: () => controller.retryTask(task),
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('重试'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                    ),
-                  ),
-                TextButton.icon(
-                  onPressed: () => controller.deleteTask(task.id),
-                  icon: const Icon(Icons.delete),
-                  label: const Text('删除'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
+  FloatingActionButton? _buildFloatingActionButton(BuildContext context) {
+    return null;
   }
 
-  // 获取状态文本
-  String _getStatusText(ConversionStatus status) {
-    switch (status) {
-      case ConversionStatus.pending:
-        return '等待中';
-      case ConversionStatus.converting:
-        return '转换中';
-      case ConversionStatus.completed:
-        return '已完成';
-      case ConversionStatus.failed:
-        return '失败';
-      case ConversionStatus.canceled:
-        return '已取消';
-    }
-  }
-
-  // 构建浮动操作按钮
-  FloatingActionButton? _buildFloatingActionButton() {
-    if (controller.selectedFiles.isNotEmpty) {
-      return FloatingActionButton.extended(
-        onPressed: controller.convertAllVideos,
-        icon: const Icon(Icons.transform),
-        label: Text('转换所有文件 (${controller.selectedFiles.length})'),
-        backgroundColor: AppColors.primary,
-      );
-    } else {
-      return null;
-    }
-  }
-
-  // 获取状态颜色
   Color _getStatusColor(ConversionStatus status) {
     switch (status) {
       case ConversionStatus.pending:
@@ -477,7 +642,22 @@ class ConvertView extends GetView<ConvertController> {
       case ConversionStatus.failed:
         return AppColors.error;
       case ConversionStatus.canceled:
-        return AppColors.textSecondary;
+        return AppColors.textTertiary;
+    }
+  }
+
+  String _getStatusText(ConversionStatus status) {
+    switch (status) {
+      case ConversionStatus.pending:
+        return '排队中';
+      case ConversionStatus.converting:
+        return '转换中';
+      case ConversionStatus.completed:
+        return '已完成';
+      case ConversionStatus.failed:
+        return '失败';
+      case ConversionStatus.canceled:
+        return '已取消';
     }
   }
 }

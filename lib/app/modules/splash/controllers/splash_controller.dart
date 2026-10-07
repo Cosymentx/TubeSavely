@@ -1,8 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../data/repositories/download_repository.dart';
-import '../../../data/repositories/video_repository.dart';
+import '../../../routes/app_pages.dart';
+import '../../../services/init_services.dart';
 import '../../../utils/logger.dart';
 
 class SplashController extends GetxController
@@ -15,59 +16,66 @@ class SplashController extends GetxController
     super.onInit();
     Logger.d('SplashController initialized');
 
-    // 初始化动画控制器
+    // 优雅的 800ms 品牌入场动画
     animationController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
+      duration: const Duration(milliseconds: 800),
     );
 
-    // 创建动画
+    // 平滑缓动
     animation = CurvedAnimation(
       parent: animationController,
-      curve: Curves.easeOut,
+      curve: Curves.easeOutCubic,
     );
 
     // 启动动画
     animationController.forward();
 
-    // 延迟3秒后导航到首页
-    Future.delayed(const Duration(seconds: 3), () {
+    // 启动极速就绪流转
+    _startStartupFlow();
+  }
+
+  /// 等待品牌动画完整展现并同步后台服务就绪
+  Future<void> _startStartupFlow() async {
+    try {
+      // 既保障 Logo 动画平滑播放完毕（800ms，避免突兀闪跳）
+      // 又等待后台服务就绪（设置 1500ms 超时上限兜底，保障网络不佳时绝不卡死）
+      await Future.wait([
+        Future.delayed(const Duration(milliseconds: 800)),
+        servicesReady.timeout(
+          const Duration(milliseconds: 1500),
+          onTimeout: () {
+            Logger.w('后台服务初始化已达安全超时上限，立即放行跳转主页');
+          },
+        ),
+      ]);
+    } catch (e) {
+      Logger.e('Splash 等待过程出现异常: $e');
+    } finally {
       _navigateToHome();
-    });
+    }
   }
 
   // 导航到首页
   void _navigateToHome() {
+    if (isClosed) return;
     try {
-      Logger.d('Trying to navigate to home...');
-
-      // 打印已注册的服务
-      Logger.d('Checking registered services...');
-
-      // 确保所有必要的服务和仓库都已经初始化完成
-      Logger.d('Checking VideoRepository...');
-      final videoRepo = Get.find<VideoRepository>();
-      Logger.d('VideoRepository found: ${videoRepo.runtimeType}');
-
-      Logger.d('Checking DownloadRepository...');
-      final downloadRepo = Get.find<DownloadRepository>();
-      Logger.d('DownloadRepository found: ${downloadRepo.runtimeType}');
-
-      Logger.d('All repositories initialized, navigating to main');
-      Get.offAllNamed('/main');
+      Logger.d('All repositories & services ready, navigating to main');
+      Get.offAllNamed(Routes.MAIN);
     } catch (e) {
-      Logger.e('Error navigating to home: $e');
+      Logger.e('Error navigating to main: $e');
 
-      // 如果初始化失败，延迟1秒后重试
-      Future.delayed(const Duration(seconds: 1), () {
-        _navigateToHome();
+      // 降级防卡死保护，仅尝试一次快速跳转
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (!isClosed) {
+          Get.offAllNamed(Routes.MAIN);
+        }
       });
     }
   }
 
   @override
   void onClose() {
-    // 释放动画控制器
     animationController.dispose();
     super.onClose();
   }

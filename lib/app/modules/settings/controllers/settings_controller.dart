@@ -259,11 +259,11 @@ class SettingsController extends GetxController {
 
   // 隐私政策
   void showPrivacyPolicy() {
-    Utils.launchURL('https://tubesavely.cosyment.com/privacy');
+    Utils.launchURL(Constants.PRIVACY_URL);
   }
 
   // 用户协议
   void showTermsOfService() {
-    Utils.launchURL('https://tubesavely.cosyment.com/terms');
+    Utils.launchURL(Constants.TERMS_URL);
   }
 }

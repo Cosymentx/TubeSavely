@@ -109,4 +109,41 @@ class AppTextStyles {
     letterSpacing: 0.4,
     height: 1.33,
   );
+
+  // ==================== 等宽数据与技术指标 (Monospace Data Tokens) ====================
+  // 用于媒体参数、下载速度、剩余时间、比特率、百分比，防止数据变动时抖动
+  static const TextStyle dataLarge = TextStyle(
+    fontSize: 20,
+    fontWeight: FontWeight.w600,
+    fontFamily: 'monospace',
+    fontFeatures: [FontFeature.tabularFigures()],
+    letterSpacing: -0.5,
+    height: 1.2,
+  );
+
+  static const TextStyle dataMedium = TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+    fontFamily: 'monospace',
+    fontFeatures: [FontFeature.tabularFigures()],
+    letterSpacing: 0,
+    height: 1.3,
+  );
+
+  static const TextStyle dataSmall = TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.w500,
+    fontFamily: 'monospace',
+    fontFeatures: [FontFeature.tabularFigures()],
+    letterSpacing: 0,
+    height: 1.2,
+  );
+
+  // 胶囊徽章文本 (如 4K, 60FPS, HDR, MP4, 320kbps)
+  static const TextStyle badge = TextStyle(
+    fontSize: 11,
+    fontWeight: FontWeight.w700,
+    letterSpacing: 0.5,
+    height: 1.1,
+  );
 }

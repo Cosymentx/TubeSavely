@@ -87,16 +87,18 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+}
 
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
     }
 }
 
 dependencies {
-    implementation("androidx.annotation:annotation-jvm:1.11.0")
-    implementation("androidx.core:core:1.19.1")
-    implementation("androidx.appcompat:appcompat:1.8.0")
+    implementation("androidx.annotation:annotation-jvm:1.7.0")
+    implementation("androidx.core:core:1.13.1")
+    implementation("androidx.appcompat:appcompat:1.6.1")
 }
 
 flutter {

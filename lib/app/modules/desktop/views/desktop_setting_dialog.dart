@@ -5,21 +5,24 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import '../../../data/providers/storage_provider.dart';
+import '../../../theme/app_colors.dart';
+import '../../../theme/app_spacing.dart';
 import '../../../utils/constants.dart';
 import '../widgets/desktop_dialog_wrapper.dart';
 import 'desktop_about_dialog.dart';
 
-/// 桌面端设置弹窗
+/// 现代化桌面端设置弹窗 (UI/UX Pro Max 精密桌面规范)
 class DesktopSettingDialog extends StatefulWidget {
   const DesktopSettingDialog({super.key});
 
   static Future<void> show(BuildContext context) {
     return showDialog(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.35),
+      barrierColor: Colors.black.withValues(alpha: 0.45),
       builder: (context) => const DesktopDialogWrapper(
-        width: 480,
+        width: 520,
         child: DesktopSettingDialog(),
       ),
     );
@@ -117,42 +120,60 @@ class _DesktopSettingDialogState extends State<DesktopSettingDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final primaryColor = theme.primaryColor;
+    final isDark = theme.brightness == Brightness.dark;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle('general_settings'.tr),
-        const SizedBox(height: 8),
+        // 标题栏
+        Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+              ),
+              child: const Icon(Icons.settings_suggest_rounded, color: AppColors.primary, size: 18),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Text(
+              'general_settings'.tr,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.lg),
 
-        // 主题设置
+        // 1. 主题选择 (分段胶囊按钮)
         _buildSettingRow(
           title: 'setting_theme'.tr,
           child: Container(
-            height: 32,
+            padding: const EdgeInsets.all(3),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(50),
-              border: Border.all(color: primaryColor, width: 0.8),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(50),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildThemeButton('setting_theme_light'.tr, ThemeMode.light),
-                  Container(width: 0.8, color: primaryColor),
-                  _buildThemeButton('setting_theme_dark'.tr, ThemeMode.dark),
-                  Container(width: 0.8, color: primaryColor),
-                  _buildThemeButton('setting_theme_system'.tr, ThemeMode.system),
-                ],
+              color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusRound),
+              border: Border.all(
+                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
               ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildThemeSegment('setting_theme_light'.tr, Icons.light_mode_rounded, ThemeMode.light),
+                _buildThemeSegment('setting_theme_dark'.tr, Icons.dark_mode_rounded, ThemeMode.dark),
+                _buildThemeSegment('setting_theme_system'.tr, Icons.devices_rounded, ThemeMode.system),
+              ],
             ),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppSpacing.md),
 
-        // 语言设置
+        // 2. 语言选择
         _buildSettingRow(
           title: 'setting_language'.tr,
           child: _buildDropdown(
@@ -165,72 +186,80 @@ class _DesktopSettingDialogState extends State<DesktopSettingDialog> {
         ),
 
         _buildDivider(),
-        _buildSectionTitle('video_settings'.tr),
-        const SizedBox(height: 8),
-
-        // 缓存目录
-        _buildSettingRow(
-          title: 'setting_cache_dir'.tr,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                constraints: const BoxConstraints(maxWidth: 200),
-                child: Text(
-                  _cacheDir,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: theme.colorScheme.onSurface.withOpacity(0.75),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 4),
-              IconButton(
-                iconSize: 20,
-                splashRadius: 18,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                icon: Icon(
-                  Icons.folder_open,
-                  color: theme.colorScheme.onSurface.withOpacity(0.7),
-                ),
-                onPressed: () async {
-                  final result = await FilePicker.platform.getDirectoryPath(
-                    initialDirectory: _cacheDir,
-                    lockParentWindow: true,
-                  );
-                  if (result != null && mounted) {
-                    setState(() {
-                      _cacheDir = result;
-                    });
-                    _storage.setDownloadPath(result);
-                  }
-                },
-              ),
-            ],
+        Text(
+          'video_settings'.tr,
+          style: theme.textTheme.labelMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: AppColors.primary,
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: AppSpacing.sm),
 
-        // 自动重编码
+        // 3. 缓存/存储目录
+        _buildSettingRow(
+          title: 'setting_cache_dir'.tr,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+              border: Border.all(
+                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 190),
+                  child: Text(
+                    _cacheDir,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                InkWell(
+                  onTap: () async {
+                    final result = await FilePicker.platform.getDirectoryPath(
+                      initialDirectory: _cacheDir,
+                      lockParentWindow: true,
+                    );
+                    if (result != null && mounted) {
+                      setState(() {
+                        _cacheDir = result;
+                      });
+                      _storage.setDownloadPath(result);
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(4),
+                  child: const Padding(
+                    padding: EdgeInsets.all(2),
+                    child: Icon(Icons.folder_open_rounded, size: 16, color: AppColors.primary),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+
+        // 4. 自动重编码
         _buildSettingRow(
           title: 'setting_recode'.tr,
           child: Switch.adaptive(
             value: _autoRecode,
-            activeColor: Colors.white,
-            activeTrackColor: primaryColor,
-            onChanged: (val) {
-              setState(() {
-                _autoRecode = val;
-              });
-            },
+            activeTrackColor: AppColors.primary,
+            onChanged: (val) => setState(() => _autoRecode = val),
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: AppSpacing.sm),
 
-        // 默认下载分辨率
+        // 5. 默认下载分辨率
         _buildSettingRow(
           title: 'setting_download_quality'.tr,
           child: _buildDropdown(
@@ -241,25 +270,20 @@ class _DesktopSettingDialogState extends State<DesktopSettingDialog> {
             },
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: AppSpacing.sm),
 
-        // 自动合并音频
+        // 6. 自动合并音频
         _buildSettingRow(
           title: 'setting_merge_audio'.tr,
           child: Switch.adaptive(
             value: _mergeAudio,
-            activeColor: Colors.white,
-            activeTrackColor: primaryColor,
-            onChanged: (val) {
-              setState(() {
-                _mergeAudio = val;
-              });
-            },
+            activeTrackColor: AppColors.primary,
+            onChanged: (val) => setState(() => _mergeAudio = val),
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: AppSpacing.sm),
 
-        // 默认转换格式
+        // 7. 默认转换格式
         _buildSettingRow(
           title: 'setting_convert_format'.tr,
           child: _buildDropdown(
@@ -272,88 +296,97 @@ class _DesktopSettingDialogState extends State<DesktopSettingDialog> {
         ),
 
         _buildDivider(),
-        _buildSectionTitle('other_settings'.tr),
-        const SizedBox(height: 6),
+        Text(
+          'other_settings'.tr,
+          style: theme.textTheme.labelMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: AppColors.primary,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xs),
 
-        _buildLinkItem('visit_website'.tr, () {
+        _buildLinkItem('visit_website'.tr, Icons.language_rounded, () {
           launchUrl(Uri.parse(Constants.WEB_URL), mode: LaunchMode.externalApplication);
         }),
-        _buildLinkItem('privacy_policy'.tr, () {
+        _buildLinkItem('privacy_policy'.tr, Icons.privacy_tip_outlined, () {
           launchUrl(Uri.parse(Constants.PRIVACY_URL), mode: LaunchMode.externalApplication);
         }),
-        _buildLinkItem('terms_of_service'.tr, () {
+        _buildLinkItem('terms_of_service'.tr, Icons.description_outlined, () {
           launchUrl(Uri.parse(Constants.TERMS_URL), mode: LaunchMode.externalApplication);
         }),
-        _buildLinkItem('about_us'.tr, () {
+        _buildLinkItem('about_us'.tr, Icons.info_outline_rounded, () {
           showDialog(
             context: context,
-            barrierColor: Colors.black.withOpacity(0.35),
+            barrierColor: Colors.black.withValues(alpha: 0.4),
             builder: (context) => const DesktopDialogWrapper(
               width: 380,
               child: DesktopAboutDialog(),
             ),
           );
         }),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.xs),
       ],
     );
   }
 
-  Widget _buildThemeButton(String label, ThemeMode mode) {
+  Widget _buildThemeSegment(String label, IconData icon, ThemeMode mode) {
     final isSelected = _themeMode == mode;
-    final primaryColor = Theme.of(context).primaryColor;
-
     return InkWell(
       onTap: () => _changeTheme(mode),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        alignment: Alignment.center,
-        color: isSelected ? primaryColor : Colors.transparent,
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            color: isSelected ? Colors.white : primaryColor,
-          ),
+      borderRadius: BorderRadius.circular(AppSpacing.radiusRound),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusRound),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 13,
+              color: isSelected ? Colors.white : AppColors.textSecondary,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected ? Colors.white : AppColors.textSecondary,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w500,
-        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.45),
-      ),
-    );
-  }
-
   Widget _buildDivider() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
       child: Divider(
         height: 1,
-        thickness: 0.8,
-        color: Theme.of(context).dividerColor.withOpacity(0.3),
+        thickness: 1,
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
       ),
     );
   }
 
   Widget _buildSettingRow({required String title, required Widget child}) {
     return SizedBox(
-      height: 36,
+      height: 38,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             title,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 13,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.85),
+              fontWeight: FontWeight.w500,
             ),
           ),
           child,
@@ -362,26 +395,32 @@ class _DesktopSettingDialogState extends State<DesktopSettingDialog> {
     );
   }
 
-  Widget _buildLinkItem(String title, VoidCallback onTap) {
+  Widget _buildLinkItem(String title, IconData icon, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(6),
+      borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 4),
+        padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 6),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 13,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
-              ),
+            Row(
+              children: [
+                Icon(icon, size: 15, color: AppColors.textSecondary),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
             Icon(
-              Icons.chevron_right,
-              size: 18,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+              Icons.chevron_right_rounded,
+              size: 17,
+              color: AppColors.textSecondary,
             ),
           ],
         ),
@@ -394,6 +433,9 @@ class _DesktopSettingDialogState extends State<DesktopSettingDialog> {
     required List<String> items,
     required ValueChanged<String?> onChanged,
   }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return DropdownButtonHideUnderline(
       child: DropdownButton2<String>(
         value: items.contains(value) ? value : items.first,
@@ -403,29 +445,34 @@ class _DesktopSettingDialogState extends State<DesktopSettingDialog> {
                   child: Text(
                     item,
                     style: TextStyle(
-                      fontSize: 13,
-                      color: Theme.of(context).colorScheme.onSurface,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: theme.colorScheme.onSurface,
                     ),
                   ),
                 ))
             .toList(),
         onChanged: onChanged,
-        buttonStyleData: const ButtonStyleData(
+        buttonStyleData: ButtonStyleData(
           height: 32,
-          padding: EdgeInsets.symmetric(horizontal: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+            border: Border.all(
+              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+            ),
+          ),
         ),
         dropdownStyleData: DropdownStyleData(
           maxHeight: 220,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            color: Theme.of(context).colorScheme.surface,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.12),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
+            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+            color: theme.colorScheme.surface,
+            border: Border.all(
+              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+            ),
+            boxShadow: AppSpacing.shadowMd,
           ),
         ),
       ),

@@ -33,7 +33,10 @@ class ApiProvider extends GetConnect {
         await _unauthorizedHandler!();
       }
       if (GetPlatform.isMobile) {
-        Get.offAllNamed('/login');
+        final currentRoute = Get.currentRoute;
+        if (currentRoute != '/splash' && currentRoute.isNotEmpty) {
+          Get.offAllNamed('/login');
+        }
       }
     } finally {
       _handlingUnauthorized = false;

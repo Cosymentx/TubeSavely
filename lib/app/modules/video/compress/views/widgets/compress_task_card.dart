@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+
 import '../../../../../data/models/video_compress_model.dart';
 import '../../../../../theme/app_colors.dart';
 import '../../../../../theme/app_spacing.dart';
@@ -8,61 +8,82 @@ import '../../../../../theme/app_text_styles.dart';
 import '../../../../../utils/utils.dart';
 import '../../controllers/compress_controller.dart';
 
+/// 压缩任务卡片（移除 ScreenUtil 强依赖，采用高对比深色/浅色精密设计）
 class CompressTaskCard extends GetView<CompressController> {
   final CompressTask task;
 
-  const CompressTaskCard({Key? key, required this.task}) : super(key: key);
+  const CompressTaskCard({super.key, required this.task});
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final isCompressing = task.status == CompressTaskStatus.compressing;
+
     return Container(
-      margin: EdgeInsets.only(bottom: 12.h),
-      padding: EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: Get.theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         border: Border.all(
-          color: task.status == CompressTaskStatus.compressing
+          color: isCompressing
               ? AppColors.primary
-              : AppColors.primaryLight10,
+              : (isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0)),
+          width: isCompressing ? 1.5 : 1,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primaryLight5,
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: isCompressing ? AppSpacing.shadowPrimaryGlow : AppSpacing.shadowSm,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 头部：文件名与状态
+          // 头部：图标、文件名、元数据与状态胶囊
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.video_file, color: AppColors.primary, size: 28.sp),
-              SizedBox(width: 10.w),
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                ),
+                child: const Icon(
+                  Icons.movie_creation_outlined,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       task.fileName,
-                      style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    SizedBox(height: 4.h),
+                    const SizedBox(height: 4),
                     Row(
                       children: [
                         _buildBadge('${task.width}x${task.height}'),
-                        SizedBox(width: 6.w),
-                        if (task.durationSeconds > 0)
-                          _buildBadge(Utils.formatDuration(Duration(seconds: task.durationSeconds.round()))),
-                        SizedBox(width: 6.w),
+                        const SizedBox(width: 4),
+                        if (task.durationSeconds > 0) ...[
+                          _buildBadge(Utils.formatDuration(
+                            Duration(seconds: task.durationSeconds.round()),
+                          )),
+                          const SizedBox(width: 4),
+                        ],
                         Text(
                           '原始: ${Utils.formatFileSize(task.sourceSizeBytes)}',
-                          style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: AppColors.textSecondary,
+                            fontSize: 11,
+                          ),
                         ),
                       ],
                     ),
@@ -73,90 +94,121 @@ class CompressTaskCard extends GetView<CompressController> {
             ],
           ),
 
-          // 进度条与实时指标
-          if (task.status == CompressTaskStatus.compressing) ...[
-            SizedBox(height: 12.h),
+          // 压缩进度条与速度/剩余时间
+          if (isCompressing) ...[
+            const SizedBox(height: AppSpacing.sm),
             ClipRRect(
-              borderRadius: BorderRadius.circular(4.r),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusRound),
               child: LinearProgressIndicator(
                 value: task.progress,
-                minHeight: 6.h,
-                backgroundColor: AppColors.primaryLight10,
+                minHeight: 5,
+                backgroundColor: colorScheme.surfaceContainerLow,
                 valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
               ),
             ),
-            SizedBox(height: 6.h),
+            const SizedBox(height: 4),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   '${(task.progress * 100).toStringAsFixed(1)}%',
-                  style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary),
+                  style: AppTextStyles.dataSmall.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
                 ),
                 Text(
                   '速度: ${task.speed ?? "1.0x"}   剩余: ${task.eta ?? "计算中..."}',
-                  style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+                  style: AppTextStyles.dataSmall.copyWith(
+                    color: AppColors.textSecondary,
+                    fontSize: 11,
+                  ),
                 ),
               ],
             ),
           ],
 
-          // 完成信息：对比与节省百分比
+          // 完成信息：对比与节省百分比展示
           if (task.status == CompressTaskStatus.completed) ...[
-            SizedBox(height: 10.h),
+            const SizedBox(height: AppSpacing.sm),
             Container(
-              padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.green.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(6.r),
+                color: AppColors.success.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                border: Border.all(
+                  color: AppColors.success.withValues(alpha: 0.2),
+                ),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.check_circle, color: Colors.green, size: 16),
-                  SizedBox(width: 6.w),
+                  const Icon(
+                    Icons.check_circle_rounded,
+                    color: AppColors.success,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 6),
                   Text(
                     '压缩后: ${Utils.formatFileSize(task.targetSizeBytes ?? 0)}',
-                    style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold, color: Colors.green[800]),
+                    style: AppTextStyles.dataSmall.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.success,
+                    ),
                   ),
                   const Spacer(),
                   if (task.savedRatio != null)
                     Text(
                       '已节省 ${task.savedRatio!.toStringAsFixed(1)}% (${Utils.formatFileSize(task.savedBytes)})',
-                      style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold, color: Colors.green[800]),
+                      style: AppTextStyles.dataSmall.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.success,
+                      ),
                     ),
                 ],
               ),
             ),
           ],
 
-          // 底部操作区
-          SizedBox(height: 8.h),
+          // 底部操作按钮
+          const SizedBox(height: AppSpacing.xs),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              if (task.status == CompressTaskStatus.compressing)
+              if (isCompressing)
                 TextButton.icon(
                   onPressed: () => controller.cancelTask(task.id),
-                  icon: const Icon(Icons.cancel, size: 16, color: Colors.red),
-                  label: const Text('取消', style: TextStyle(color: Colors.red)),
+                  icon: const Icon(Icons.cancel_rounded, size: 16),
+                  label: const Text('取消', style: TextStyle(fontSize: 12)),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.error,
+                    visualDensity: VisualDensity.compact,
+                  ),
                 ),
               if (task.status == CompressTaskStatus.completed) ...[
                 TextButton.icon(
                   onPressed: () => controller.openFile(task.targetPath),
-                  icon: const Icon(Icons.play_circle_outline, size: 16),
-                  label: const Text('播放'),
+                  icon: const Icon(Icons.play_arrow_rounded, size: 16),
+                  label: const Text('播放', style: TextStyle(fontSize: 12)),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.success,
+                    visualDensity: VisualDensity.compact,
+                  ),
                 ),
-                SizedBox(width: 8.w),
                 TextButton.icon(
                   onPressed: () => controller.openOutputFolder(),
-                  icon: const Icon(Icons.folder, size: 16),
-                  label: const Text('定位文件'),
+                  icon: const Icon(Icons.folder_open_rounded, size: 16),
+                  label: const Text('定位文件', style: TextStyle(fontSize: 12)),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    visualDensity: VisualDensity.compact,
+                  ),
                 ),
               ],
-              TextButton.icon(
+              IconButton(
+                tooltip: '移除记录',
+                icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                color: AppColors.textSecondary,
                 onPressed: () => controller.removeTask(task.id),
-                icon: Icon(Icons.delete_outline, size: 16, color: AppColors.textSecondary),
-                label: Text('移除', style: TextStyle(color: AppColors.textSecondary)),
               ),
             ],
           ),
@@ -167,50 +219,68 @@ class CompressTaskCard extends GetView<CompressController> {
 
   Widget _buildBadge(String text) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
       decoration: BoxDecoration(
-        color: AppColors.primaryLight10,
-        borderRadius: BorderRadius.circular(4.r),
+        color: AppColors.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(3),
       ),
-      child: Text(text, style: TextStyle(fontSize: 10.sp, color: AppColors.primary, fontWeight: FontWeight.w600)),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 10,
+          color: AppColors.primary,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
 
   Widget _buildStatusBadge() {
+    Color color;
+    String text;
+
     switch (task.status) {
       case CompressTaskStatus.pending:
-        return Chip(
-          label: const Text('等待中'),
-          visualDensity: VisualDensity.compact,
-        );
+        color = const Color(0xFF3B82F6);
+        text = '等待中';
+        break;
       case CompressTaskStatus.analyzing:
-        return Chip(
-          label: const Text('分析中'),
-          visualDensity: VisualDensity.compact,
-        );
+        color = const Color(0xFFF59E0B);
+        text = '分析中';
+        break;
       case CompressTaskStatus.compressing:
-        return Chip(
-          label: const Text('压缩中', style: TextStyle(color: Colors.white)),
-          backgroundColor: AppColors.primary,
-          visualDensity: VisualDensity.compact,
-        );
+        color = AppColors.primary;
+        text = '压缩中';
+        break;
       case CompressTaskStatus.completed:
-        return Chip(
-          label: const Text('已完成', style: TextStyle(color: Colors.white)),
-          backgroundColor: Colors.green,
-          visualDensity: VisualDensity.compact,
-        );
+        color = AppColors.success;
+        text = '已完成';
+        break;
       case CompressTaskStatus.failed:
-        return Chip(
-          label: const Text('失败', style: TextStyle(color: Colors.white)),
-          backgroundColor: Colors.red,
-          visualDensity: VisualDensity.compact,
-        );
+        color = AppColors.error;
+        text = '失败';
+        break;
       case CompressTaskStatus.canceled:
-        return Chip(
-          label: const Text('已取消'),
-          visualDensity: VisualDensity.compact,
-        );
+        color = AppColors.textTertiary;
+        text = '已取消';
+        break;
     }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
   }
 }

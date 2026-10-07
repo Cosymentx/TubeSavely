@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -13,7 +14,7 @@ import 'app/translations/app_translations.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 初始化服务
+  // 初始化服务（移动端仅同步耗时~15ms的核心服务，后台并发重型服务）
   await initServices();
 
   // 设置系统UI样式
@@ -25,11 +26,13 @@ void main() async {
     ),
   );
 
-  // 设置设备方向
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
+  // 设置设备方向（移动端异步设置，不阻塞首帧呈现）
+  if (GetPlatform.isMobile) {
+    unawaited(SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]));
+  }
 
   // 初始化窗口管理器（桌面平台）
   if (!GetPlatform.isMobile) {

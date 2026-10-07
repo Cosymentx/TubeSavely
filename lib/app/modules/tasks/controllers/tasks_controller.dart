@@ -11,8 +11,8 @@ class TasksController extends GetxController {
 
   // 直接从DownloadService获取响应式任务列表，并提供一个排序后的视图
   List<DownloadTaskModel> get downloadTasks {
-    final tasks = _downloadService.tasks;
-    tasks.sort((a, b) {
+    final list = List<DownloadTaskModel>.from(_downloadService.tasks);
+    list.sort((a, b) {
       final statusOrder = {
         DownloadStatus.downloading: 0,
         DownloadStatus.pending: 1,
@@ -21,11 +21,13 @@ class TasksController extends GetxController {
         DownloadStatus.canceled: 4,
         DownloadStatus.failed: 5,
       };
-      final statusCompare = statusOrder[a.status]!.compareTo(statusOrder[b.status]!);
+      final aOrder = statusOrder[a.status] ?? 99;
+      final bOrder = statusOrder[b.status] ?? 99;
+      final statusCompare = aOrder.compareTo(bOrder);
       if (statusCompare != 0) return statusCompare;
       return b.createdAt.compareTo(a.createdAt);
     });
-    return tasks;
+    return list;
   }
 
   // 是否正在加载

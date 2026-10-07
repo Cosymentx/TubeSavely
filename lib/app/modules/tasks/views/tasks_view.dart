@@ -1,39 +1,61 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import '../controllers/tasks_controller.dart';
-import '../../../theme/app_theme.dart';
-import '../../../theme/app_text_styles.dart';
-import '../../../data/models/download_task_model.dart';
-import '../../../widgets/adaptive/adaptive_scaffold.dart';
-import '../../../widgets/adaptive/adaptive_dialog.dart';
-import '../../../widgets/empty_state.dart';
 
+import '../../../data/models/download_task_model.dart';
+import '../../../routes/app_pages.dart';
+import '../../../theme/app_colors.dart';
+import '../../../theme/app_spacing.dart';
+import '../../../theme/app_text_styles.dart';
+import '../../../widgets/adaptive/adaptive_dialog.dart';
+import '../../../widgets/adaptive/adaptive_scaffold.dart';
+import '../../../widgets/adaptive/responsive_layout.dart';
+import '../../../widgets/empty_state.dart';
+import '../controllers/tasks_controller.dart';
+
+/// 现代化响应式下载任务视图（移动端 & 桌面端通用，移除 ScreenUtil 强依赖）
 class TasksView extends GetView<TasksController> {
-  const TasksView({Key? key}) : super(key: key);
+  const TasksView({super.key});
 
   @override
   Widget build(BuildContext context) {
     return AdaptiveScaffold(
-      appBar: _buildAppBar(),
-      cupertinoNavBar: _buildCupertinoNavBar(),
+      appBar: _buildAppBar(context),
+      cupertinoNavBar: _buildCupertinoNavBar(context),
       body: SafeArea(
-        child: Column(
-          children: [
-            _buildTaskStats(),
-            Expanded(
-              child: _buildTaskList(),
-            ),
-          ],
+        top: false,
+        child: ResponsiveBuilder(
+          builder: (context, screenType) {
+            final isCompact = screenType == AppScreenType.compact;
+            return ResponsiveContainer(
+              maxWidth: 1000,
+              padding: EdgeInsets.symmetric(
+                horizontal: isCompact
+                    ? AppSpacing.pagePaddingHorizontal
+                    : AppSpacing.desktopContentPadding,
+                vertical: AppSpacing.md,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildTaskStats(context),
+                  const SizedBox(height: AppSpacing.md),
+                  Expanded(
+                    child: _buildTaskList(context),
+                  ),
+                ],
+              ),
+            );
+          },
         ),
       ),
-      floatingActionButton: _buildFloatingActionButton(),
+      floatingActionButton: _buildFloatingActionButton(context),
     );
   }
 
-  CupertinoNavigationBar _buildCupertinoNavBar() {
+  // ==================== iOS 顶部导航栏 ====================
+  CupertinoNavigationBar _buildCupertinoNavBar(BuildContext context) {
     return CupertinoNavigationBar(
       middle: const Text('下载任务'),
       trailing: Obx(() {
@@ -46,7 +68,7 @@ class TasksView extends GetView<TasksController> {
                 onPressed: controller.selectAll,
                 child: const Icon(CupertinoIcons.checkmark_circle, size: 22),
               ),
-              SizedBox(width: 8.w),
+              const SizedBox(width: AppSpacing.sm),
               CupertinoButton(
                 padding: EdgeInsets.zero,
                 onPressed: controller.selectedItems.isNotEmpty
@@ -73,34 +95,42 @@ class TasksView extends GetView<TasksController> {
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
+  // ==================== Material / 桌面端 AppBar ====================
+  PreferredSizeWidget _buildAppBar(BuildContext context) {
+    final theme = Theme.of(context);
+
     return AppBar(
       title: Text(
         '下载任务',
-        style: AppTextStyles.titleLarge,
+        style: theme.textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.bold,
+        ),
       ),
       centerTitle: true,
       elevation: 0,
       actions: [
         Obx(() {
           if (controller.isEditing.value) {
+            final selectedCount = controller.selectedItems.length;
             return Row(
               children: [
-                IconButton(
-                  icon: const Icon(Icons.select_all),
+                TextButton(
                   onPressed: controller.selectAll,
+                  child: const Text('全选'),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.delete),
-                  onPressed: controller.selectedItems.isNotEmpty
-                      ? controller.deleteSelected
-                      : null,
+                  tooltip: '删除选中 ($selectedCount)',
+                  icon: const Icon(Icons.delete_outline_rounded),
+                  color: selectedCount > 0 ? AppColors.error : AppColors.textTertiary,
+                  onPressed: selectedCount > 0 ? controller.deleteSelected : null,
                 ),
+                const SizedBox(width: AppSpacing.xs),
               ],
             );
           } else {
             return IconButton(
-              icon: const Icon(Icons.edit),
+              tooltip: '批量管理',
+              icon: const Icon(Icons.edit_note_rounded),
               onPressed: controller.toggleEditMode,
             );
           }
@@ -109,87 +139,102 @@ class TasksView extends GetView<TasksController> {
     );
   }
 
-  // 任务统计
-  Widget _buildTaskStats() {
+  // ==================== 顶部任务指标统计 ====================
+  Widget _buildTaskStats(BuildContext context) {
     return Obx(() {
-      return Container(
-        padding: EdgeInsets.all(16.w),
-        child: Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                title: '下载中',
-                count: controller.downloadingTasksCount,
-                icon: Icons.download_rounded,
-                color: AppTheme.primaryColor,
-              ),
+      return Row(
+        children: [
+          Expanded(
+            child: _buildStatCard(
+              context: context,
+              title: '下载中',
+              count: controller.downloadingTasksCount,
+              icon: Icons.arrow_downward_rounded,
+              color: AppColors.primary,
             ),
-            SizedBox(width: 12.w),
-            Expanded(
-              child: _buildStatCard(
-                title: '已完成',
-                count: controller.completedTasksCount,
-                icon: Icons.check_circle,
-                color: AppTheme.successColor,
-              ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: _buildStatCard(
+              context: context,
+              title: '已完成',
+              count: controller.completedTasksCount,
+              icon: Icons.check_circle_rounded,
+              color: AppColors.success,
             ),
-            SizedBox(width: 12.w),
-            Expanded(
-              child: _buildStatCard(
-                title: '失败',
-                count: controller.failedTasksCount,
-                icon: Icons.error,
-                color: AppTheme.errorColor,
-              ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: _buildStatCard(
+              context: context,
+              title: '失败 / 暂停',
+              count: controller.failedTasksCount,
+              icon: Icons.error_outline_rounded,
+              color: AppColors.error,
             ),
-          ],
-        ),
+          ),
+        ],
       );
     });
   }
 
-  // 统计卡片
   Widget _buildStatCard({
+    required BuildContext context,
     required String title,
     required int count,
     required IconData icon,
     required Color color,
   }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
-      padding: EdgeInsets.all(12.w),
-      decoration: BoxDecoration(
-        color: Get.theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(12.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm + 2,
       ),
-      child: Column(
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        border: Border.all(
+          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+          width: 1,
+        ),
+        boxShadow: AppSpacing.shadowSm,
+      ),
+      child: Row(
         children: [
-          Icon(
-            icon,
-            color: color,
-            size: 24.sp,
-          ),
-          SizedBox(height: 8.h),
-          Text(
-            count.toString(),
-            style: TextStyle(
-              fontSize: 18.sp,
-              fontWeight: FontWeight.bold,
-              color: color,
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
             ),
+            child: Icon(icon, color: color, size: 18),
           ),
-          SizedBox(height: 4.h),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 12.sp,
-              color: Get.theme.colorScheme.onSurface.withOpacity(0.7),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  count.toString(),
+                  style: AppTextStyles.dataLarge.copyWith(
+                    color: colorScheme.onSurface,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  title,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: AppColors.textSecondary,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -197,212 +242,225 @@ class TasksView extends GetView<TasksController> {
     );
   }
 
-  // 任务列表
-  Widget _buildTaskList() {
+  // ==================== 任务列表构建 ====================
+  Widget _buildTaskList(BuildContext context) {
     return Obx(() {
       if (controller.isLoading.value) {
-        return Center(
-          child: CircularProgressIndicator(),
+        return const Center(
+          child: CircularProgressIndicator(strokeWidth: 2.5),
         );
       }
 
       if (controller.downloadTasks.isEmpty) {
-        return const Center(
+        return Center(
           child: EmptyState(
             icon: Icons.download_done_rounded,
             title: '暂无下载任务',
-            subtitle: '在首页解析视频后即可在此查看下载进度',
+            subtitle: '在首页粘贴音视频链接，即可在此处查看下载进度与文件',
+            actionLabel: '前往解析下载',
+            onAction: () => Get.offAllNamed(Routes.MAIN),
           ),
         );
       }
 
-      return ListView.builder(
-        padding: EdgeInsets.symmetric(horizontal: 16.w),
+      return ListView.separated(
+        padding: const EdgeInsets.only(
+          top: AppSpacing.xs,
+          bottom: AppSpacing.xxl,
+        ),
         itemCount: controller.downloadTasks.length,
+        separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
         itemBuilder: (context, index) {
           final task = controller.downloadTasks[index];
-          return _buildTaskItem(task);
+          return _buildTaskItem(context, task);
         },
       );
     });
   }
 
-  // 任务项
-  Widget _buildTaskItem(DownloadTaskModel task) {
+  // ==================== 单个任务卡片 ====================
+  Widget _buildTaskItem(BuildContext context, DownloadTaskModel task) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     return Obx(() {
       final isSelected = controller.isSelected(task);
+      final isEditing = controller.isEditing.value;
 
-      return Card(
-        margin: EdgeInsets.only(bottom: 12.h),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12.r),
-          side: BorderSide(
-            color: isSelected
-                ? AppTheme.primaryColor
-                : Get.theme.colorScheme.onSurface.withOpacity(0.1),
-            width: isSelected ? 2 : 1,
-          ),
-        ),
+      return Material(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         child: InkWell(
-          onTap: controller.isEditing.value
-              ? () => controller.toggleSelectItem(task)
-              : null,
-          borderRadius: BorderRadius.circular(12.r),
-          child: Padding(
-            padding: EdgeInsets.all(12.w),
+          onTap: isEditing ? () => controller.toggleSelectItem(task) : null,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+          child: Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              border: Border.all(
+                color: isSelected
+                    ? AppColors.primary
+                    : (isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0)),
+                width: isSelected ? 1.5 : 1,
+              ),
+              boxShadow: isSelected ? AppSpacing.shadowPrimaryGlow : AppSpacing.shadowSm,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 缩略图
+                    // 编辑勾选指示器
+                    if (isEditing) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(right: AppSpacing.sm, top: 8),
+                        child: Icon(
+                          isSelected
+                              ? Icons.check_circle_rounded
+                              : Icons.radio_button_unchecked_rounded,
+                          color: isSelected ? AppColors.primary : AppColors.textTertiary,
+                          size: 22,
+                        ),
+                      ),
+                    ],
+
+                    // 视频封面缩略图
                     ClipRRect(
-                      borderRadius: BorderRadius.circular(8.r),
-                      child: task.thumbnail != null
-                          ? CachedNetworkImage(
-                              imageUrl: task.thumbnail!,
-                              width: 80.w,
-                              height: 60.h,
-                              fit: BoxFit.cover,
-                              placeholder: (context, url) => Container(
-                                color: Colors.grey[300],
-                                child: Center(
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2.w,
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                      child: SizedBox(
+                        width: 90,
+                        height: 56,
+                        child: task.thumbnail != null
+                            ? CachedNetworkImage(
+                                imageUrl: task.thumbnail!,
+                                fit: BoxFit.cover,
+                                placeholder: (_, __) => Container(
+                                  color: colorScheme.surfaceContainerLow,
+                                  child: const Center(
+                                    child: CircularProgressIndicator(strokeWidth: 2),
                                   ),
                                 ),
-                              ),
-                              errorWidget: (context, url, error) => Container(
-                                color: Colors.grey[300],
+                                errorWidget: (_, __, ___) => Container(
+                                  color: colorScheme.surfaceContainerLow,
+                                  child: Icon(
+                                    Icons.video_library_rounded,
+                                    color: AppColors.textTertiary,
+                                  ),
+                                ),
+                              )
+                            : Container(
+                                color: colorScheme.surfaceContainerLow,
                                 child: Icon(
-                                  Icons.error,
-                                  color: Colors.grey[500],
+                                  Icons.video_library_rounded,
+                                  color: AppColors.textTertiary,
                                 ),
                               ),
-                            )
-                          : Container(
-                              width: 80.w,
-                              height: 60.h,
-                              color: Colors.grey[300],
-                              child: Icon(
-                                Icons.video_library,
-                                color: Colors.grey[500],
-                              ),
-                            ),
+                      ),
                     ),
-                    SizedBox(width: 12.w),
-                    // 任务信息
+                    const SizedBox(width: AppSpacing.md),
+
+                    // 视频标题与信息
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             task.title,
-                            style: TextStyle(
-                              fontSize: 14.sp,
-                              fontWeight: FontWeight.w500,
-                              color: Get.theme.colorScheme.onSurface,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              height: 1.25,
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          SizedBox(height: 4.h),
+                          const SizedBox(height: 6),
                           Row(
                             children: [
-                              _buildStatusBadge(task.status),
-                              SizedBox(width: 8.w),
+                              _buildStatusBadge(context, task.status),
+                              const SizedBox(width: AppSpacing.sm),
                               if (task.platform != null) ...[
-                                Icon(
-                                  Icons.videocam,
-                                  size: 14.sp,
-                                  color: Get.theme.colorScheme.onSurface
-                                      .withOpacity(0.6),
-                                ),
-                                SizedBox(width: 4.w),
                                 Text(
                                   task.platform!,
-                                  style: TextStyle(
-                                    fontSize: 12.sp,
-                                    color: Get.theme.colorScheme.onSurface
-                                        .withOpacity(0.6),
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 11,
                                   ),
                                 ),
+                                const SizedBox(width: AppSpacing.sm),
                               ],
+                              if (task.quality != null || task.format != null)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 1,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.surfaceContainerLow,
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(
+                                      color: colorScheme.outlineVariant,
+                                      width: 0.5,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    '${task.quality ?? ""} ${task.format ?? ""}'.trim(),
+                                    style: AppTextStyles.dataSmall.copyWith(
+                                      fontSize: 10,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ),
                             ],
                           ),
-                          SizedBox(height: 4.h),
-                          if (task.quality != null || task.format != null)
-                            Text(
-                              '${task.quality ?? ''} ${task.format ?? ''}',
-                              style: TextStyle(
-                                fontSize: 12.sp,
-                                color: Get.theme.colorScheme.onSurface
-                                    .withOpacity(0.6),
-                              ),
-                            ),
                         ],
                       ),
                     ),
-                    // 选择指示器或操作按钮
-                    if (controller.isEditing.value)
-                      Padding(
-                        padding: EdgeInsets.only(left: 8.w),
-                        child: Icon(
-                          isSelected
-                              ? Icons.check_circle
-                              : Icons.radio_button_unchecked,
-                          color: isSelected
-                              ? AppTheme.primaryColor
-                              : Get.theme.colorScheme.onSurface
-                                  .withOpacity(0.3),
-                          size: 24.sp,
-                        ),
-                      )
-                    else
-                      _buildTaskActions(task),
+
+                    // 右侧快捷操作按钮（仅在非编辑模式展示）
+                    if (!isEditing) _buildTaskActionButtons(context, task),
                   ],
                 ),
-                SizedBox(height: 8.h),
-                // 进度条
+
+                // 下载进度条与指标（仅在进行中或暂停状态展示）
                 if (task.status == DownloadStatus.downloading ||
-                    task.status == DownloadStatus.paused)
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    task.status == DownloadStatus.paused) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusRound),
+                    child: LinearProgressIndicator(
+                      value: task.progress,
+                      minHeight: 5,
+                      backgroundColor: colorScheme.surfaceContainerLow,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        task.status == DownloadStatus.paused
+                            ? const Color(0xFFF59E0B)
+                            : AppColors.primary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      LinearProgressIndicator(
-                        value: task.progress,
-                        backgroundColor: Colors.grey[300],
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          task.status == DownloadStatus.paused
-                              ? Colors.grey
-                              : AppTheme.primaryColor,
+                      Text(
+                        task.progressText,
+                        style: AppTextStyles.dataSmall.copyWith(
+                          fontSize: 11,
+                          color: AppColors.textSecondary,
                         ),
                       ),
-                      SizedBox(height: 4.h),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            task.progressText,
-                            style: TextStyle(
-                              fontSize: 12.sp,
-                              color: Get.theme.colorScheme.onSurface
-                                  .withOpacity(0.6),
-                            ),
-                          ),
-                          Text(
-                            '${task.formattedDownloadedBytes} / ${task.formattedTotalBytes}',
-                            style: TextStyle(
-                              fontSize: 12.sp,
-                              color: Get.theme.colorScheme.onSurface
-                                  .withOpacity(0.6),
-                            ),
-                          ),
-                        ],
+                      Text(
+                        '${task.formattedDownloadedBytes} / ${task.formattedTotalBytes}',
+                        style: AppTextStyles.dataSmall.copyWith(
+                          fontSize: 11,
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                     ],
                   ),
+                ],
               ],
             ),
           ),
@@ -411,120 +469,114 @@ class TasksView extends GetView<TasksController> {
     });
   }
 
-  // 状态标签
-  Widget _buildStatusBadge(DownloadStatus status) {
+  // ==================== 状态胶囊标签 ====================
+  Widget _buildStatusBadge(BuildContext context, DownloadStatus status) {
     Color color;
-    String text = status.toString().split('.').last;
+    String text;
 
     switch (status) {
       case DownloadStatus.downloading:
-        color = AppTheme.primaryColor;
+        color = AppColors.primary;
         text = '下载中';
         break;
       case DownloadStatus.pending:
-        color = Colors.blue;
+        color = const Color(0xFF3B82F6);
         text = '等待中';
         break;
       case DownloadStatus.paused:
-        color = Colors.orange;
+        color = const Color(0xFFF59E0B);
         text = '已暂停';
         break;
       case DownloadStatus.completed:
-        color = AppTheme.successColor;
+        color = AppColors.success;
         text = '已完成';
         break;
       case DownloadStatus.failed:
-        color = AppTheme.errorColor;
+        color = AppColors.error;
         text = '下载失败';
         break;
       case DownloadStatus.canceled:
-        color = Colors.grey;
+        color = AppColors.textTertiary;
         text = '已取消';
         break;
     }
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(4.r),
-        border: Border.all(color: color, width: 1),
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withValues(alpha: 0.4), width: 0.8),
       ),
       child: Text(
         text,
         style: TextStyle(
-          fontSize: 10.sp,
+          fontSize: 10,
           color: color,
-          fontWeight: FontWeight.bold,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
   }
 
-  // 任务操作按钮
-  Widget _buildTaskActions(DownloadTaskModel task) {
+  // ==================== 任务快捷操作按钮 ====================
+  Widget _buildTaskActionButtons(BuildContext context, DownloadTaskModel task) {
     switch (task.status) {
       case DownloadStatus.downloading:
         return IconButton(
-          icon: Icon(
-            Icons.pause,
-            size: 20.sp,
-            color: AppTheme.primaryColor,
-          ),
+          tooltip: '暂停',
+          icon: const Icon(Icons.pause_circle_filled_rounded, size: 24),
+          color: AppColors.primary,
           onPressed: () => controller.pauseTask(task.id),
         );
       case DownloadStatus.paused:
         return IconButton(
-          icon: Icon(
-            Icons.play_arrow,
-            size: 20.sp,
-            color: AppTheme.primaryColor,
-          ),
+          tooltip: '继续下载',
+          icon: const Icon(Icons.play_circle_fill_rounded, size: 24),
+          color: AppColors.primary,
           onPressed: () => controller.resumeTask(task.id),
         );
       case DownloadStatus.pending:
         return IconButton(
-          icon: Icon(
-            Icons.cancel,
-            size: 20.sp,
-            color: AppTheme.warningColor,
-          ),
+          tooltip: '取消',
+          icon: const Icon(Icons.cancel_rounded, size: 22),
+          color: AppColors.warning,
           onPressed: () => controller.cancelTask(task.id),
         );
       case DownloadStatus.completed:
       case DownloadStatus.failed:
       case DownloadStatus.canceled:
         return IconButton(
-          icon: Icon(
-            Icons.delete,
-            size: 20.sp,
-            color: AppTheme.errorColor,
-          ),
+          tooltip: '删除记录',
+          icon: const Icon(Icons.delete_outline_rounded, size: 20),
+          color: AppColors.textSecondary,
           onPressed: () => _showDeleteConfirmation(task),
         );
     }
   }
 
-  // 构建浮动操作按钮
-  FloatingActionButton? _buildFloatingActionButton() {
-    final isEditing = controller.isEditing.value;
-    if (isEditing) {
-      return FloatingActionButton(
+  // ==================== 编辑模式浮动按钮 ====================
+  Widget? _buildFloatingActionButton(BuildContext context) {
+    return Obx(() {
+      final isEditing = controller.isEditing.value;
+      if (!isEditing) return const SizedBox.shrink();
+
+      return FloatingActionButton.extended(
         onPressed: controller.toggleEditMode,
-        backgroundColor: AppTheme.primaryColor,
-        child: Icon(Icons.check),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.check_rounded),
+        label: const Text('完成管理'),
       );
-    } else {
-      return null;
-    }
+    });
   }
 
-  // 显示删除确认对话框
+  // ==================== 删除确认弹窗 ====================
   void _showDeleteConfirmation(DownloadTaskModel task) {
     Get.dialog(
       AdaptiveDialog(
         title: '删除任务',
-        message: '确定要删除此下载任务吗？',
+        message: '确定要删除此下载任务吗？本地已缓存内容也将一并清理。',
         confirmButtonText: '删除',
         cancelButtonText: '取消',
         isDangerousAction: true,

@@ -55,3 +55,11 @@ upload-appstore.sh
 # Flutter symbol/obfuscation output
 app.*.symbols
 app.*.map.json
+
+# Local build / installer artifacts
+*-setup.exe
+*.exe
+TubeSavely-*.zip
+
+# FVM Version Cache
+.fvm/

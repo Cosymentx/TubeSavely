@@ -1,10 +1,8 @@
 import 'package:get/get.dart';
 import '../data/models/user_model.dart';
-import '../data/models/api_response_model.dart';
 import '../data/providers/api_provider.dart';
 import '../data/providers/storage_provider.dart';
 import '../utils/logger.dart';
-import '../utils/utils.dart';
 
 /// 用户服务
 ///
@@ -34,6 +32,12 @@ class UserService extends GetxService {
     final token = await _storageProvider.getUserToken();
     isLoggedIn.value = token != null && token.isNotEmpty;
     _apiProvider.setAuthToken(token);
+
+    // 立即从本地缓存恢复用户信息，无需等待网络请求
+    final cachedUser = _storageProvider.getUserInfo();
+    if (cachedUser != null) {
+      currentUser.value = cachedUser;
+    }
 
     // 有本地 token 时主动向服务器校验一次；401 会走统一会话清理。
     if (isLoggedIn.value) {
