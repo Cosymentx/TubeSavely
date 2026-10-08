@@ -78,7 +78,7 @@ dependencies:
   crypto: ^3.0.3
   shake_animation_widget: ^3.0.4
   dropdown_button2: ^2.3.9
-  sign_in_with_apple: ^7.0.1
+  sign_in_with_apple: ^8.2.0
   google_sign_in: ^6.2.1
   volume_controller: ^3.3.3
 #  share_plus: ^7.2.1
